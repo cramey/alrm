@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"bufio"
-	"strings"
-	"unicode/utf8"
 )
 
 func main(){
@@ -22,82 +20,65 @@ func main(){
 	}
 	defer file.Close()
 
-	lscan := bufio.NewScanner(file)
-	lscan.Split(bufio.ScanLines)
-	for lscan.Scan() {
-		line := lscan.Text()
-		// Ignore comments
-		if len(line) < 1 || line[0] == '#' {
-			continue
-		}
-
-		wscan := bufio.NewScanner(strings.NewReader(line))
-		wscan.Split(ScanWords)
-		for wscan.Scan() {
-			word := wscan.Text()
-			fmt.Printf("[%s] ", word)
-		}
+	scan := bufio.NewScanner(file)
+	scan.Split(Split)
+	for scan.Scan() {
+		word := scan.Text()
+		fmt.Printf("[%s] ", word)
 	}
 	fmt.Printf("\n")
 }
 
-func ScanWords(data []byte, atEOF bool) (int, []byte, error) {
-	start := 0
-	quote := int32(0)
-	for start < len(data) {
-		r, w := utf8.DecodeRune(data[start:])
-		if !isSpace(r) {
-			if isQuote(r) {
-				quote = r
-				start += w
-			}
-			break
+func Split(data []byte, atEOF bool) (int, []byte, error) {
+	var ignoreline bool
+	var started bool
+	var startidx int
+	var quote byte
+
+	for i := 0; i < len(data); i++ {
+		c := data[i]
+		switch c {
+			case '\f', '\n', '\r':
+				if ignoreline {
+					return i + 1, nil, nil
+				}
+				fallthrough
+
+			case ' ', '\t', '\v':
+				if started && quote == 0 {
+					return i + 1, data[startidx:i], nil
+				}
+
+			case '\'', '"', '`':
+				if started && quote == c {
+					return i + 1, data[startidx:i], nil
+				}
+
+				if quote == 0 {
+					quote = c
+				}
+
+			case '#':
+				if !started {
+					ignoreline = true
+				}
+
+			default:
+				if !ignoreline && !started {
+					started = true
+					startidx = i
+				}
 		}
-		start += w
 	}
 
-	for i := start; i < len(data); {
-		r, w := utf8.DecodeRune(data[i:])
-
-		if (quote > 0 && quote == r) || (quote == 0 && isSpace(r)) {
-			return i + w, data[start:i], nil
+	if atEOF {
+		if ignoreline {
+			return len(data), nil, nil
 		}
-
-		i += w
-	}
-
-	if atEOF && len(data) > start {
-		return len(data), data[start:], nil
-	}
-	return start, nil, nil
-}
-
-func isQuote(r rune) bool {
-	switch r {
-		case '\u0022', '\u0027':
-			return true
-	}
-	return false
-}
-
-func isSpace(r rune) bool {
-	if r <= '\u00FF' {
-		switch r {
-			case ' ', '\t', '\n', '\v', '\f', '\r':
-				return true
-			case '\u0085', '\u00A0':
-				return true
+		if started {
+			return len(data), data[startidx:], nil
 		}
-		return false
 	}
 
-	if '\u2000' <= r && r <= '\u200a' {
-		return true
-	}
-
-	switch r {
-		case '\u1680', '\u2028', '\u2029', '\u202f', '\u205f', '\u3000':
-		return true
-	}
-	return false
+	return 0, nil, nil
 }
