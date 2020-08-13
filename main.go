@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
-	"bufio"
 )
 
-func main(){
+func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "filename required\n")
 		os.Exit(1)
@@ -38,36 +38,36 @@ func Split(data []byte, atEOF bool) (int, []byte, error) {
 	for i := 0; i < len(data); i++ {
 		c := data[i]
 		switch c {
-			case '\f', '\n', '\r':
-				if ignoreline {
-					return i + 1, nil, nil
-				}
-				fallthrough
+		case '\f', '\n', '\r':
+			if ignoreline {
+				return i + 1, nil, nil
+			}
+			fallthrough
 
-			case ' ', '\t', '\v':
-				if started && quote == 0 {
-					return i + 1, data[startidx:i], nil
-				}
+		case ' ', '\t', '\v':
+			if started && quote == 0 {
+				return i + 1, data[startidx:i], nil
+			}
 
-			case '\'', '"', '`':
-				if started && quote == c {
-					return i + 1, data[startidx:i], nil
-				}
+		case '\'', '"', '`':
+			if started && quote == c {
+				return i + 1, data[startidx:i], nil
+			}
 
-				if quote == 0 {
-					quote = c
-				}
+			if quote == 0 {
+				quote = c
+			}
 
-			case '#':
-				if !started {
-					ignoreline = true
-				}
+		case '#':
+			if !started {
+				ignoreline = true
+			}
 
-			default:
-				if !ignoreline && !started {
-					started = true
-					startidx = i
-				}
+		default:
+			if !ignoreline && !started {
+				started = true
+				startidx = i
+			}
 		}
 	}
 
