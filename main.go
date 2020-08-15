@@ -20,16 +20,26 @@ func main() {
 	}
 	defer file.Close()
 
+	split := &Splitter{}
 	scan := bufio.NewScanner(file)
-	scan.Split(Split)
-	for scan.Scan() {
+	scan.Split(split.Split)
+	for lastline := 0; scan.Scan(); {
+		if lastline < split.Line {
+			lastline = split.Line
+			fmt.Printf("\n")
+		}
 		word := scan.Text()
 		fmt.Printf("[%s] ", word)
 	}
 	fmt.Printf("\n")
 }
 
-func Split(data []byte, atEOF bool) (int, []byte, error) {
+
+type Splitter struct {
+	Line int
+}
+
+func (sp *Splitter) Split(data []byte, atEOF bool) (int, []byte, error) {
 	var ignoreline bool
 	var started bool
 	var startidx int
@@ -39,6 +49,7 @@ func Split(data []byte, atEOF bool) (int, []byte, error) {
 		c := data[i]
 		switch c {
 		case '\f', '\n', '\r':
+			sp.Line++
 			if ignoreline {
 				return i + 1, nil, nil
 			}
