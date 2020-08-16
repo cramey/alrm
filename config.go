@@ -86,7 +86,7 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 				parser.SetState(TK_MONITOR)
 			default:
 				return nil, fmt.Errorf("Invalid token in %s, line %d: \"%s\"",
-					fn, parser.Line, tk)
+					fn, parser.Line+1, tk)
 			}
 
 		case TK_MONITOR:
