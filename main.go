@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 )
@@ -12,84 +12,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	file, err := os.Open(os.Args[1])
+	config, err := ReadConfig(os.Args[1])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "cannot open %s: %s\n",
-			os.Args[1], err.Error())
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(1)
 	}
-	defer file.Close()
 
-	split := &Splitter{}
-	scan := bufio.NewScanner(file)
-	scan.Split(split.Split)
-	for lastline := 0; scan.Scan(); {
-		if lastline < split.Line {
-			lastline = split.Line
-			fmt.Printf("\n")
-		}
-		word := scan.Text()
-		fmt.Printf("[%s] ", word)
-	}
-	fmt.Printf("\n")
-}
-
-
-type Splitter struct {
-	Line int
-}
-
-func (sp *Splitter) Split(data []byte, atEOF bool) (int, []byte, error) {
-	var ignoreline bool
-	var started bool
-	var startidx int
-	var quote byte
-
-	for i := 0; i < len(data); i++ {
-		c := data[i]
-		switch c {
-		case '\f', '\n', '\r':
-			sp.Line++
-			if ignoreline {
-				return i + 1, nil, nil
-			}
-			fallthrough
-
-		case ' ', '\t', '\v':
-			if started && quote == 0 {
-				return i + 1, data[startidx:i], nil
-			}
-
-		case '\'', '"', '`':
-			if started && quote == c {
-				return i + 1, data[startidx:i], nil
-			}
-
-			if quote == 0 {
-				quote = c
-			}
-
-		case '#':
-			if !started {
-				ignoreline = true
-			}
-
-		default:
-			if !ignoreline && !started {
-				started = true
-				startidx = i
-			}
-		}
+	o, err := json.Marshal(config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "JSON error: %s\n", err.Error())
+		os.Exit(1)
 	}
 
-	if atEOF {
-		if ignoreline {
-			return len(data), nil, nil
-		}
-		if started {
-			return len(data), data[startidx:], nil
-		}
-	}
-
-	return 0, nil, nil
+	fmt.Println(string(o))
 }
