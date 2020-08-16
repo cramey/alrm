@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type AlrmConfig struct {
-	Groups []*AlrmGroup
+	Groups   []*AlrmGroup
+	Interval int
 }
 
 func (ac *AlrmConfig) NewGroup() *AlrmGroup {
@@ -43,6 +45,7 @@ type AlrmHost struct {
 
 const (
 	TK_NONE = iota
+	TK_SET
 	TK_MONITOR
 	TK_GROUP
 	TK_HOST
@@ -52,6 +55,8 @@ func stateName(s int) string {
 	switch s {
 	case TK_NONE:
 		return "TK_NONE"
+	case TK_SET:
+		return "TK_SET"
 	case TK_MONITOR:
 		return "TK_MONTIOR"
 	case TK_GROUP:
@@ -84,10 +89,33 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 			switch strings.ToLower(tk) {
 			case "monitor":
 				parser.SetState(TK_MONITOR)
+			case "set":
+				parser.SetState(TK_SET)
 			default:
-				return nil, fmt.Errorf("Invalid token in %s, line %d: \"%s\"",
+				return nil, fmt.Errorf("invalid token in %s, line %d: \"%s\"",
 					fn, parser.Line+1, tk)
 			}
+
+		case TK_SET:
+			key := strings.ToLower(tk)
+			if scan.Scan() {
+				value := scan.Text()
+				switch key {
+				case "interval":
+					config.Interval, err = strconv.Atoi(value)
+					if err != nil {
+						return nil, fmt.Errorf(
+							"invalid number for interval, line %d: \"%s\"",
+							parser.Line+1, value,
+						)
+					}
+				default:
+					return nil, fmt.Errorf("invalid key for set, line %d: \"%s\"",
+						parser.Line+1, tk,
+					)
+				}
+			}
+			parser.PrevState()
 
 		case TK_MONITOR:
 			switch strings.ToLower(tk) {
@@ -135,7 +163,6 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 				if scan.Scan() {
 					host.Address = scan.Text()
 				}
-				continue
 
 			default:
 				parser.PrevState()
@@ -143,7 +170,7 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 			}
 
 		default:
-			return nil, fmt.Errorf("Unknown parser state: %d", parser.GetState())
+			return nil, fmt.Errorf("unknown parser state: %d", parser.GetState())
 		}
 	}
 	if err := scan.Err(); err != nil {
@@ -153,7 +180,7 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 }
 
 type Parser struct {
-	Line  int
+	Line   int
 	states []int
 }
 
@@ -161,7 +188,7 @@ func (pr *Parser) GetState() int {
 	if len(pr.states) < 1 {
 		return TK_NONE
 	}
-	return pr.states[len(pr.states) - 1]
+	return pr.states[len(pr.states)-1]
 }
 
 func (pr *Parser) SetState(state int) {
@@ -171,7 +198,7 @@ func (pr *Parser) SetState(state int) {
 
 func (pr *Parser) PrevState() int {
 	if len(pr.states) > 0 {
-		pr.states = pr.states[:len(pr.states) - 1]
+		pr.states = pr.states[:len(pr.states)-1]
 	}
 	return pr.GetState()
 }
