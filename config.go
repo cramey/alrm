@@ -45,8 +45,7 @@ const (
 	TK_NONE = iota
 	TK_MONITOR
 	TK_GROUP
-	TK_PLAIN_HOST
-	TK_GROUP_HOST
+	TK_HOST
 )
 
 func stateName(s int) string {
@@ -57,10 +56,8 @@ func stateName(s int) string {
 		return "TK_MONTIOR"
 	case TK_GROUP:
 		return "TK_GROUP"
-	case TK_PLAIN_HOST:
-		return "TK_PLAIN_HOST"
-	case TK_GROUP_HOST:
-		return "TK_GROUP_HOST"
+	case TK_HOST:
+		return "TK_HOST"
 	default:
 		return "UNKNOWN"
 	}
@@ -82,7 +79,7 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 		tk := scan.Text()
 
 	stateswitch:
-		switch parser.State {
+		switch parser.GetState() {
 		case TK_NONE:
 			switch strings.ToLower(tk) {
 			case "monitor":
@@ -96,14 +93,14 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 			switch strings.ToLower(tk) {
 			case "host":
 				config.NewGroup().NewHost()
-				parser.SetState(TK_PLAIN_HOST)
+				parser.SetState(TK_HOST)
 
 			case "group":
 				config.NewGroup()
 				parser.SetState(TK_GROUP)
 
 			default:
-				parser.SetState(TK_NONE)
+				parser.PrevState()
 				goto stateswitch
 			}
 
@@ -113,7 +110,7 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 			switch strings.ToLower(tk) {
 			case "host":
 				group.NewHost()
-				parser.SetState(TK_GROUP_HOST)
+				parser.SetState(TK_HOST)
 				continue
 
 			default:
@@ -122,13 +119,11 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 					continue
 				}
 
-				parser.SetState(TK_MONITOR)
+				parser.PrevState()
 				goto stateswitch
 			}
 
-		case TK_PLAIN_HOST:
-			fallthrough
-		case TK_GROUP_HOST:
+		case TK_HOST:
 			host := config.LastGroup().LastHost()
 			if host.Name == "" {
 				host.Name = tk
@@ -143,17 +138,12 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 				continue
 
 			default:
-				if parser.State == TK_GROUP_HOST {
-					parser.SetState(TK_GROUP)
-				} else if parser.State == TK_PLAIN_HOST {
-					parser.SetState(TK_MONITOR)
-				}
-
+				parser.PrevState()
 				goto stateswitch
 			}
 
 		default:
-			return nil, fmt.Errorf("Unknown parser state: %d", parser.State)
+			return nil, fmt.Errorf("Unknown parser state: %d", parser.GetState())
 		}
 	}
 	if err := scan.Err(); err != nil {
@@ -164,12 +154,26 @@ func ReadConfig(fn string) (*AlrmConfig, error) {
 
 type Parser struct {
 	Line  int
-	State int
+	states []int
+}
+
+func (pr *Parser) GetState() int {
+	if len(pr.states) < 1 {
+		return TK_NONE
+	}
+	return pr.states[len(pr.states) - 1]
 }
 
 func (pr *Parser) SetState(state int) {
-	//fmt.Printf("%s -> %s\n", stateName(pr.State), stateName(state))
-	pr.State = state
+	//fmt.Printf("%s -> %s\n", stateName(pr.GetState()), stateName(state))
+	pr.states = append(pr.states, state)
+}
+
+func (pr *Parser) PrevState() int {
+	if len(pr.states) > 0 {
+		pr.states = pr.states[:len(pr.states) - 1]
+	}
+	return pr.GetState()
 }
 
 func (pr *Parser) Split(data []byte, atEOF bool) (int, []byte, error) {
