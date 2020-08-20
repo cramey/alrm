@@ -14,6 +14,7 @@ const (
 	TK_MONITOR
 	TK_GROUP
 	TK_HOST
+	TK_CHECK
 )
 
 type Parser struct {
@@ -31,6 +32,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 	config := &AlrmConfig{}
 	var group *AlrmGroup
 	var host *AlrmHost
+	var check AlrmCheck
 
 	scan := bufio.NewScanner(file)
 	scan.Split(p.Split)
@@ -51,22 +53,25 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 
 		case TK_SET:
 			key := strings.ToLower(tk)
-			if scan.Scan() {
-				value := scan.Text()
-				switch key {
-				case "interval":
-					config.Interval, err = strconv.Atoi(value)
-					if err != nil {
-						return nil, fmt.Errorf(
-							"invalid number for interval, line %d: \"%s\"",
-							p.Line+1, value,
-						)
-					}
-				default:
-					return nil, fmt.Errorf("invalid key for set, line %d: \"%s\"",
-						p.Line+1, tk,
+			if !scan.Scan() {
+				return nil, fmt.Errorf("empty value name for set in %s, line %d",
+					fn, p.Line+1)
+			}
+
+			value := scan.Text()
+			switch key {
+			case "interval":
+				config.Interval, err = strconv.Atoi(value)
+				if err != nil {
+					return nil, fmt.Errorf(
+						"invalid number for interval in %s, line %d: \"%s\"",
+						fn, p.Line+1, value,
 					)
 				}
+			default:
+				return nil, fmt.Errorf("unknown key for set in %s, line %d: \"%s\"",
+					fn, p.Line+1, tk,
+				)
 			}
 			p.prevState()
 
@@ -87,7 +92,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 
 		case TK_GROUP:
 			if group == nil {
-				return nil, fmt.Errorf("Group token without initialization")
+				return nil, fmt.Errorf("group without initialization")
 			}
 
 			switch strings.ToLower(tk) {
@@ -108,7 +113,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 
 		case TK_HOST:
 			if host == nil {
-				return nil, fmt.Errorf("Host token without initialization")
+				return nil, fmt.Errorf("host token without initialization")
 			}
 
 			if host.Name == "" {
@@ -118,14 +123,35 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 
 			switch strings.ToLower(tk) {
 			case "address":
-				if scan.Scan() {
-					host.Address = scan.Text()
+				if !scan.Scan() {
+					return nil, fmt.Errorf("empty address for host in %s, line %d",
+						fn, p.Line+1)
 				}
+				host.Address = scan.Text()
+
+			case "check":
+				check = nil
+				p.setState(TK_CHECK)
 
 			default:
 				p.prevState()
 				goto stateswitch
 			}
+
+		case TK_CHECK:
+			if check == nil {
+				if host == nil {
+					return nil, fmt.Errorf("host token without initialization")
+				}
+				check, err = NewCheck(strings.ToLower(tk), host.GetAddress())
+				if err != nil {
+					return nil, fmt.Errorf("%s in %s, line %d",
+						err.Error(), fn, p.Line+1)
+				}
+				host.Checks = append(host.Checks, check)
+				continue
+			}
+			check.Parse(tk)
 
 		default:
 			return nil, fmt.Errorf("unknown parser state: %d", p.state())
@@ -169,6 +195,8 @@ func (p *Parser) stateName() string {
 		return "TK_GROUP"
 	case TK_HOST:
 		return "TK_HOST"
+	case TK_CHECK:
+		return "TK_CHECK"
 	default:
 		return "UNKNOWN"
 	}

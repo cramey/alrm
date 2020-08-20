@@ -25,6 +25,19 @@ func (ag *AlrmGroup) NewHost() *AlrmHost {
 type AlrmHost struct {
 	Name    string
 	Address string
+	Checks  []AlrmCheck
+}
+
+func (ah *AlrmHost) GetAddress() string {
+	if ah.Address != "" {
+		return ah.Address
+	}
+	return ah.Name
+}
+
+type AlrmCheck interface {
+	Parse(string) (bool, error)
+	Check() error
 }
 
 func ReadConfig(fn string) (*AlrmConfig, error) {
