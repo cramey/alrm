@@ -141,7 +141,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 		case TK_CHECK:
 			if check == nil {
 				if host == nil {
-					return nil, fmt.Errorf("host token without initialization")
+					return nil, fmt.Errorf("check token without initialization")
 				}
 				check, err = NewCheck(strings.ToLower(tk), host.GetAddress())
 				if err != nil {
@@ -151,7 +151,14 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 				host.Checks = append(host.Checks, check)
 				continue
 			}
-			check.Parse(tk)
+			cont, err := check.Parse(tk)
+			if err != nil {
+				return nil, err
+			}
+			if !cont {
+				p.prevState()
+				goto stateswitch
+			}
 
 		default:
 			return nil, fmt.Errorf("unknown parser state: %d", p.state())
@@ -214,6 +221,7 @@ func (p *Parser) Split(data []byte, atEOF bool) (int, []byte, error) {
 
 	for i := 0; i < len(data); i++ {
 		c := data[i]
+//		fmt.Printf("%c (%t) (%t)\n", c, started, ignoreline)
 		switch c {
 		case '\f', '\n', '\r':
 			p.Line++
@@ -233,7 +241,7 @@ func (p *Parser) Split(data []byte, atEOF bool) (int, []byte, error) {
 				return i + 1, data[startidx:i], nil
 			}
 
-			if quote == 0 {
+			if !ignoreline && quote == 0 {
 				quote = c
 			}
 
