@@ -1,0 +1,11 @@
+set interval 30
+
+monitor host gateway address 10.11.135.100
+
+monitor group webservers
+	host www1.example.com address 10.11.135.101
+		check ping
+	host www2.example.com address 10.11.135.102
+		check ping
+
+monitor host database

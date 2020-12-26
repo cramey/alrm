@@ -78,7 +78,8 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 		case TK_MONITOR:
 			switch strings.ToLower(tk) {
 			case "host":
-				host = config.NewGroup().NewHost()
+				group = config.NewGroup()
+				host = group.NewHost()
 				p.setState(TK_HOST)
 
 			case "group":
