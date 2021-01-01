@@ -6,43 +6,51 @@ import (
 	"flag"
 	"os"
 	"strings"
+	"alrm/config"
 )
 
 func main() {
-	configPath := flag.String("config", "", "path to configuration file")
+	cfgPath := flag.String("c", "", "path to configuration file")
+	debuglvl := flag.Int("d", 0, "debug level")
 
 	flag.Parse()
 
-	if *configPath == "" {
+	if *cfgPath == "" {
 		if _, err := os.Stat("./alrmrc"); err == nil {
-			*configPath = "./alrmrc"
+			*cfgPath = "./alrmrc"
 		}
 		if _, err := os.Stat("/etc/alrmrc"); err == nil {
-			*configPath = "/etc/alrmrc"
+			*cfgPath = "/etc/alrmrc"
 		}
-		if *configPath == "" {
+		if *cfgPath == "" {
 			fmt.Fprintf(os.Stderr, "Cannot find configuration\n")
 			os.Exit(1)
 		}
 	}
 
-	config, err := ReadConfig(*configPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-		os.Exit(1)
-	}
-
 	command := strings.ToLower(flag.Arg(0))
 	switch command {
 		case "json":
-			o, err := json.MarshalIndent(config, "", "  ")
+			cfg, err := config.ReadConfig(*cfgPath, *debuglvl)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				os.Exit(1)
+			}
+
+			o, err := json.MarshalIndent(cfg, "", "  ")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "JSON error: %s\n", err.Error())
 				os.Exit(1)
 			}
-			fmt.Fprintf(os.Stdout, "%s", string(o))
+			fmt.Fprintf(os.Stdout, "%s\n", string(o))
 
 		case "", "config":
+			_, err := config.ReadConfig(*cfgPath, *debuglvl)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				os.Exit(1)
+			}
+
 			fmt.Fprintf(os.Stdout, "Config is OK.\n")
 			os.Exit(0)
 

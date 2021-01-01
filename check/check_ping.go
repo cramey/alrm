@@ -1,6 +1,7 @@
-package main
+package check
 
 type CheckPing struct {
+	Type string
 	Address string
 }
 

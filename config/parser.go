@@ -1,10 +1,10 @@
-package main
+package config
 
 import (
+	"alrm/check"
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -18,8 +18,12 @@ const (
 )
 
 type Parser struct {
-	Line   int
-	states []int
+	DebugLevel int
+	Line       int
+	states     []int
+	lasthost   *AlrmHost
+	lastgroup  *AlrmGroup
+	lastcheck  check.AlrmCheck
 }
 
 func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
@@ -30,9 +34,6 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 	defer file.Close()
 
 	config := &AlrmConfig{}
-	var group *AlrmGroup
-	var host *AlrmHost
-	var check AlrmCheck
 
 	scan := bufio.NewScanner(file)
 	scan.Split(p.Split)
@@ -61,7 +62,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 			value := scan.Text()
 			switch key {
 			case "interval":
-				config.Interval, err = strconv.Atoi(value)
+				err := config.SetInterval(value)
 				if err != nil {
 					return nil, fmt.Errorf(
 						"invalid number for interval in %s, line %d: \"%s\"",
@@ -78,12 +79,9 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 		case TK_MONITOR:
 			switch strings.ToLower(tk) {
 			case "host":
-				group = config.NewGroup()
-				host = group.NewHost()
 				p.setState(TK_HOST)
 
 			case "group":
-				group = config.NewGroup()
 				p.setState(TK_GROUP)
 
 			default:
@@ -92,33 +90,43 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 			}
 
 		case TK_GROUP:
-			if group == nil {
-				return nil, fmt.Errorf("group without initialization")
+			if p.lastgroup == nil {
+				p.lastgroup, err = config.NewGroup(tk)
+				if err != nil {
+					return nil, fmt.Errorf("%s in %s, line %d",
+						err.Error(), fn, p.Line+1,
+					)
+				}
+				continue
 			}
 
 			switch strings.ToLower(tk) {
 			case "host":
-				host = group.NewHost()
 				p.setState(TK_HOST)
-				continue
 
 			default:
-				if group.Name == "" {
-					group.Name = tk
-					continue
-				}
-
 				p.prevState()
 				goto stateswitch
 			}
 
 		case TK_HOST:
-			if host == nil {
-				return nil, fmt.Errorf("host token without initialization")
+			// If a host has no group, inherit the host name
+			if p.lastgroup == nil {
+				p.lastgroup, err = config.NewGroup(tk)
+				if err != nil {
+					return nil, fmt.Errorf("%s in %s, line %d",
+						err.Error(), fn, p.Line+1,
+					)
+				}
 			}
 
-			if host.Name == "" {
-				host.Name = tk
+			if p.lasthost == nil {
+				p.lasthost, err = p.lastgroup.NewHost(tk)
+				if err != nil {
+					return nil, fmt.Errorf("%s in %s, line %d",
+						err.Error(), fn, p.Line+1,
+					)
+				}
 				continue
 			}
 
@@ -128,10 +136,9 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 					return nil, fmt.Errorf("empty address for host in %s, line %d",
 						fn, p.Line+1)
 				}
-				host.Address = scan.Text()
+				p.lasthost.Address = scan.Text()
 
 			case "check":
-				check = nil
 				p.setState(TK_CHECK)
 
 			default:
@@ -140,23 +147,20 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 			}
 
 		case TK_CHECK:
-			if check == nil {
-				if host == nil {
-					return nil, fmt.Errorf("check token without initialization")
-				}
-				check, err = NewCheck(strings.ToLower(tk), host.GetAddress())
+			if p.lastcheck == nil {
+				p.lastcheck, err = p.lasthost.NewCheck(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
 						err.Error(), fn, p.Line+1)
 				}
-				host.Checks = append(host.Checks, check)
 				continue
 			}
-			cont, err := check.Parse(tk)
+			cont, err := p.lastcheck.Parse(tk)
 			if err != nil {
 				return nil, err
 			}
 			if !cont {
+				p.lastcheck = nil
 				p.prevState()
 				goto stateswitch
 			}
@@ -179,9 +183,24 @@ func (p *Parser) state() int {
 }
 
 func (p *Parser) setState(state int) {
-	// fmt.Printf("%s", p.stateName())
+	switch state {
+	case TK_SET, TK_MONITOR:
+		fallthrough
+	case TK_GROUP:
+		p.lastgroup = nil
+		fallthrough
+	case TK_HOST:
+		p.lasthost = nil
+		p.lastcheck = nil
+	}
+
+	if p.DebugLevel > 0 {
+		fmt.Printf("Parser state: %s", p.stateName())
+	}
 	p.states = append(p.states, state)
-	// fmt.Printf(" -> %s\n", p.stateName())
+	if p.DebugLevel > 0 {
+		fmt.Printf(" -> %s\n", p.stateName())
+	}
 }
 
 func (p *Parser) prevState() int {
@@ -222,7 +241,7 @@ func (p *Parser) Split(data []byte, atEOF bool) (int, []byte, error) {
 
 	for i := 0; i < len(data); i++ {
 		c := data[i]
-//		fmt.Printf("%c (%t) (%t)\n", c, started, ignoreline)
+		// fmt.Printf("%c (%t) (%t)\n", c, started, ignoreline)
 		switch c {
 		case '\f', '\n', '\r':
 			p.Line++
