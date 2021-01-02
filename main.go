@@ -44,15 +44,39 @@ func main() {
 			}
 			fmt.Fprintf(os.Stdout, "%s\n", string(o))
 
-		case "", "config":
+		case "check", "config", "":
 			_, err := config.ReadConfig(*cfgPath, *debuglvl)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				os.Exit(1)
 			}
-
 			fmt.Fprintf(os.Stdout, "Config is OK.\n")
-			os.Exit(0)
+
+		case "test":
+			cfg, err := config.ReadConfig(*cfgPath, *debuglvl)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				os.Exit(1)
+			}
+
+			tn := flag.Arg(1)
+			if tn == "" {
+				fmt.Fprintf(os.Stderr, "test requires a host or group\n")
+				os.Exit(1)
+			}
+
+			group, exists := cfg.Groups[tn]
+			if !exists {
+				fmt.Fprintf(os.Stderr, "group or host is not defined\n")
+				os.Exit(1)
+			}
+
+			err = group.Check()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Check failed: %s\n", err.Error())
+				os.Exit(1)
+			}
+			fmt.Fprintf(os.Stdout, "Check successful\n")
 
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)

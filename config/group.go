@@ -22,3 +22,15 @@ func (ag *AlrmGroup) NewHost(name string) (*AlrmHost, error) {
 	ag.Hosts[name] = host
 	return host, nil
 }
+
+func (ag *AlrmGroup) Check() error {
+	for _, host := range ag.Hosts {
+		for _, chk := range host.Checks {
+			err := chk.Check()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
