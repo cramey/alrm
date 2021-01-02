@@ -49,14 +49,14 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 				p.setState(TK_SET)
 			default:
 				return nil, fmt.Errorf("invalid token in %s, line %d: \"%s\"",
-					fn, p.Line+1, tk)
+					fn, p.Line, tk)
 			}
 
 		case TK_SET:
 			key := strings.ToLower(tk)
 			if !scan.Scan() {
 				return nil, fmt.Errorf("empty value name for set in %s, line %d",
-					fn, p.Line+1)
+					fn, p.Line)
 			}
 
 			value := scan.Text()
@@ -66,12 +66,12 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 				if err != nil {
 					return nil, fmt.Errorf(
 						"invalid number for interval in %s, line %d: \"%s\"",
-						fn, p.Line+1, value,
+						fn, p.Line, value,
 					)
 				}
 			default:
 				return nil, fmt.Errorf("unknown key for set in %s, line %d: \"%s\"",
-					fn, p.Line+1, tk,
+					fn, p.Line, tk,
 				)
 			}
 			p.prevState()
@@ -94,7 +94,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 				p.lastgroup, err = config.NewGroup(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, p.Line+1,
+						err.Error(), fn, p.Line,
 					)
 				}
 				continue
@@ -115,7 +115,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 				p.lastgroup, err = config.NewGroup(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, p.Line+1,
+						err.Error(), fn, p.Line,
 					)
 				}
 			}
@@ -124,7 +124,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 				p.lasthost, err = p.lastgroup.NewHost(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, p.Line+1,
+						err.Error(), fn, p.Line,
 					)
 				}
 				continue
@@ -134,7 +134,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 			case "address":
 				if !scan.Scan() {
 					return nil, fmt.Errorf("empty address for host in %s, line %d",
-						fn, p.Line+1)
+						fn, p.Line)
 				}
 				p.lasthost.Address = scan.Text()
 
@@ -151,13 +151,14 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 				p.lastcheck, err = p.lasthost.NewCheck(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, p.Line+1)
+						err.Error(), fn, p.Line)
 				}
 				continue
 			}
 			cont, err := p.lastcheck.Parse(tk)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%s in %s, line %d",
+					err.Error(), fn, p.Line)
 			}
 			if !cont {
 				p.lastcheck = nil

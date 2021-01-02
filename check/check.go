@@ -12,7 +12,7 @@ type AlrmCheck interface {
 func NewCheck(name string, addr string) (AlrmCheck, error) {
 	switch name {
 	case "ping":
-		return &CheckPing{Type: "ping", Address: addr}, nil
+		return NewCheckPing(addr), nil
 	default:
 		return nil, fmt.Errorf("unknown check name \"%s\"", name)
 	}
