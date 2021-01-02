@@ -6,7 +6,7 @@ import (
 
 type AlrmCheck interface {
 	Parse(string) (bool, error)
-	Check() error
+	Check(int) error
 }
 
 func NewCheck(name string, addr string) (AlrmCheck, error) {

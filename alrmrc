@@ -8,7 +8,7 @@ monitor group webservers
 		check ping # or the end of a line
 		check ping # checks are not named, so multiple is okay
 
-monitor host gateway address 10.79.37.200
+monitor host gateway address 10.79.37.220
 	check ping
 
 # Hosts without any checks will always be successful

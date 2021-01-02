@@ -44,7 +44,7 @@ func main() {
 			}
 			fmt.Fprintf(os.Stdout, "%s\n", string(o))
 
-		case "check", "config", "":
+		case "config", "":
 			_, err := config.ReadConfig(*cfgPath, *debuglvl)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
@@ -52,16 +52,16 @@ func main() {
 			}
 			fmt.Fprintf(os.Stdout, "Config is OK.\n")
 
-		case "test":
-			cfg, err := config.ReadConfig(*cfgPath, *debuglvl)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-				os.Exit(1)
-			}
-
+		case "check":
 			tn := flag.Arg(1)
 			if tn == "" {
 				fmt.Fprintf(os.Stderr, "test requires a host or group\n")
+				os.Exit(1)
+			}
+
+			cfg, err := config.ReadConfig(*cfgPath, 0)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				os.Exit(1)
 			}
 
@@ -71,7 +71,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			err = group.Check()
+			err = group.Check(*debuglvl)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Check failed: %s\n", err.Error())
 				os.Exit(1)
