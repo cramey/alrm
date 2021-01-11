@@ -195,11 +195,11 @@ func (p *Parser) setState(state int) {
 		p.lastcheck = nil
 	}
 
-	if p.DebugLevel > 0 {
+	if p.DebugLevel > 1 {
 		fmt.Printf("Parser state: %s", p.stateName())
 	}
 	p.states = append(p.states, state)
-	if p.DebugLevel > 0 {
+	if p.DebugLevel > 1 {
 		fmt.Printf(" -> %s\n", p.stateName())
 	}
 }
