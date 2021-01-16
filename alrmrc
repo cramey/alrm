@@ -1,4 +1,10 @@
-set interval 30
+set interval 30s
+
+#alarm people email
+#	to test1@localhost
+#	to test2@localhost
+#	smtp localhost
+#	from alrm@localhost
 
 monitor group webservers
 	host www1.example.com address 10.11.135.101

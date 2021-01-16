@@ -2,12 +2,12 @@ package config
 
 import (
 	"fmt"
-	"strconv"
+	"time"
 )
 
 type AlrmConfig struct {
 	Groups   map[string]*AlrmGroup
-	Interval int
+	Interval time.Duration
 }
 
 func (ac *AlrmConfig) NewGroup(name string) (*AlrmGroup, error) {
@@ -25,7 +25,7 @@ func (ac *AlrmConfig) NewGroup(name string) (*AlrmGroup, error) {
 }
 
 func (ac *AlrmConfig) SetInterval(val string) error {
-	interval, err := strconv.Atoi(val)
+	interval, err := time.ParseDuration(val)
 	if err != nil {
 		return err
 	}
