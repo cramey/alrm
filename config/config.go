@@ -10,6 +10,13 @@ type AlrmConfig struct {
 	Interval time.Duration
 }
 
+func NewConfig() *AlrmConfig {
+	return &AlrmConfig{
+		// Default check interval, 30 seconds
+		Interval: time.Second * 30,
+	}
+}
+
 func (ac *AlrmConfig) NewGroup(name string) (*AlrmGroup, error) {
 	if ac.Groups == nil {
 		ac.Groups = make(map[string]*AlrmGroup)

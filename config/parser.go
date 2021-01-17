@@ -33,7 +33,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 	}
 	defer file.Close()
 
-	config := &AlrmConfig{}
+	config := NewConfig()
 
 	scan := bufio.NewScanner(file)
 	scan.Split(p.Split)
