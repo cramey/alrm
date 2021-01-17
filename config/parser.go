@@ -276,7 +276,7 @@ func (p *Parser) Split(data []byte, atEOF bool) (int, []byte, error) {
 
 	for i := 0; i < len(data); i++ {
 		c := data[i]
-		// fmt.Printf("%c (%t) (%t)\n", c, started, ignoreline)
+		//fmt.Printf("%c (%t) (%t)\n", c, started, ignoreline)
 		switch c {
 		case '\f', '\n', '\r':
 			p.Line++
@@ -292,10 +292,17 @@ func (p *Parser) Split(data []byte, atEOF bool) (int, []byte, error) {
 			}
 
 		case '\'', '"', '`':
-			if started && quote == c {
-				return i + 1, data[startidx:i], nil
+			// When the quote ends
+			if quote == c {
+				// if we've gotten data, return it
+				if started {
+					return i + 1, data[startidx:i], nil
+				}
+				// if we haven't return nothing
+				return i + 1, []byte{}, nil
 			}
 
+			// start a quoted string
 			if !ignoreline && quote == 0 {
 				quote = c
 			}
@@ -314,6 +321,10 @@ func (p *Parser) Split(data []byte, atEOF bool) (int, []byte, error) {
 	}
 
 	if atEOF {
+		if quote != 0 {
+			return 0, nil, fmt.Errorf("unterminated quote")
+		}
+
 		if ignoreline {
 			return len(data), nil, nil
 		}

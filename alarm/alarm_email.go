@@ -44,6 +44,9 @@ func (a *AlarmEmail) Parse(tk string) (bool, error) {
 				case "smtp":
 					a.state = TK_SMTP
 				default:
+					if len(a.To) < 1 {
+						return false, fmt.Errorf("email alarm requires to address")
+					}
 					return false, nil
 			}
 
@@ -56,6 +59,9 @@ func (a *AlarmEmail) Parse(tk string) (bool, error) {
 			a.state = TK_NONE
 
 		case TK_TO:
+			if strings.TrimSpace(tk) == "" {
+				return false, fmt.Errorf("to address cannot be empty")
+			}
 			a.To = append(a.To, tk)
 			a.state = TK_NONE
 
