@@ -1,6 +1,7 @@
 package config
 
 import (
+	"alrm/alarm"
 	"alrm/check"
 	"bufio"
 	"fmt"
@@ -15,18 +16,21 @@ const (
 	TK_GROUP
 	TK_HOST
 	TK_CHECK
+	TK_ALARM
 )
 
 type Parser struct {
-	DebugLevel int
-	Line       int
-	states     []int
-	lasthost   *AlrmHost
-	lastgroup  *AlrmGroup
-	lastcheck  check.AlrmCheck
+	DebugLevel    int
+	Line          int
+	states        []int
+	lastHost      *Host
+	lastGroup     *Group
+	lastCheck     check.Check
+	lastAlarm     alarm.Alarm
+	lastAlarmName string
 }
 
-func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
+func (p *Parser) Parse(fn string) (*Config, error) {
 	file, err := os.Open(fn)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open config \"%s\": %s", fn, err.Error())
@@ -47,6 +51,8 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 				p.setState(TK_MONITOR)
 			case "set":
 				p.setState(TK_SET)
+			case "alarm":
+				p.setState(TK_ALARM)
 			default:
 				return nil, fmt.Errorf("invalid token in %s, line %d: \"%s\"",
 					fn, p.Line, tk)
@@ -90,8 +96,8 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 			}
 
 		case TK_GROUP:
-			if p.lastgroup == nil {
-				p.lastgroup, err = config.NewGroup(tk)
+			if p.lastGroup == nil {
+				p.lastGroup, err = config.NewGroup(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
 						err.Error(), fn, p.Line,
@@ -111,8 +117,8 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 
 		case TK_HOST:
 			// If a host has no group, inherit the host name
-			if p.lastgroup == nil {
-				p.lastgroup, err = config.NewGroup(tk)
+			if p.lastGroup == nil {
+				p.lastGroup, err = config.NewGroup(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
 						err.Error(), fn, p.Line,
@@ -120,8 +126,8 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 				}
 			}
 
-			if p.lasthost == nil {
-				p.lasthost, err = p.lastgroup.NewHost(tk)
+			if p.lastHost == nil {
+				p.lastHost, err = p.lastGroup.NewHost(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
 						err.Error(), fn, p.Line,
@@ -136,7 +142,7 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 					return nil, fmt.Errorf("empty address for host in %s, line %d",
 						fn, p.Line)
 				}
-				p.lasthost.Address = scan.Text()
+				p.lastHost.Address = scan.Text()
 
 			case "check":
 				p.setState(TK_CHECK)
@@ -147,21 +153,47 @@ func (p *Parser) Parse(fn string) (*AlrmConfig, error) {
 			}
 
 		case TK_CHECK:
-			if p.lastcheck == nil {
-				p.lastcheck, err = p.lasthost.NewCheck(tk)
+			if p.lastCheck == nil {
+				p.lastCheck, err = p.lastHost.NewCheck(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
 						err.Error(), fn, p.Line)
 				}
 				continue
 			}
-			cont, err := p.lastcheck.Parse(tk)
+			cont, err := p.lastCheck.Parse(tk)
 			if err != nil {
 				return nil, fmt.Errorf("%s in %s, line %d",
 					err.Error(), fn, p.Line)
 			}
 			if !cont {
-				p.lastcheck = nil
+				p.lastCheck = nil
+				p.prevState()
+				goto stateswitch
+			}
+
+		case TK_ALARM:
+			if p.lastAlarm == nil {
+				if p.lastAlarmName == "" {
+					p.lastAlarmName = tk
+					continue
+				}
+
+				p.lastAlarm, err = config.NewAlarm(p.lastAlarmName, tk)
+				if err != nil {
+					return nil, fmt.Errorf("%s in %s, line %d",
+						err.Error(), fn, p.Line)
+				}
+				p.lastAlarmName = ""
+				continue
+			}
+			cont, err := p.lastAlarm.Parse(tk)
+			if err != nil {
+				return nil, fmt.Errorf("%s in %s, line %d",
+					err.Error(), fn, p.Line)
+			}
+			if !cont {
+				p.lastAlarm = nil
 				p.prevState()
 				goto stateswitch
 			}
@@ -188,11 +220,11 @@ func (p *Parser) setState(state int) {
 	case TK_SET, TK_MONITOR:
 		fallthrough
 	case TK_GROUP:
-		p.lastgroup = nil
+		p.lastGroup = nil
 		fallthrough
 	case TK_HOST:
-		p.lasthost = nil
-		p.lastcheck = nil
+		p.lastHost = nil
+		p.lastCheck = nil
 	}
 
 	if p.DebugLevel > 1 {
@@ -225,6 +257,8 @@ func (p *Parser) stateName() string {
 		return "TK_HOST"
 	case TK_CHECK:
 		return "TK_CHECK"
+	case TK_ALARM:
+		return "TK_ALARM"
 	default:
 		return "UNKNOWN"
 	}

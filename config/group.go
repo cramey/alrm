@@ -4,26 +4,26 @@ import (
 	"fmt"
 )
 
-type AlrmGroup struct {
+type Group struct {
 	Name  string
-	Hosts map[string]*AlrmHost
+	Hosts map[string]*Host
 }
 
-func (ag *AlrmGroup) NewHost(name string) (*AlrmHost, error) {
+func (ag *Group) NewHost(name string) (*Host, error) {
 	if ag.Hosts == nil {
-		ag.Hosts = make(map[string]*AlrmHost)
+		ag.Hosts = make(map[string]*Host)
 	}
 
 	if _, exists := ag.Hosts[name]; exists {
 		return nil, fmt.Errorf("host %s already exists", name)
 	}
 
-	host := &AlrmHost{Name: name}
+	host := &Host{Name: name}
 	ag.Hosts[name] = host
 	return host, nil
 }
 
-func (ag *AlrmGroup) Check(debuglvl int) error {
+func (ag *Group) Check(debuglvl int) error {
 	for _, host := range ag.Hosts {
 		for _, chk := range host.Checks {
 			err := chk.Check(debuglvl)

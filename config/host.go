@@ -4,20 +4,20 @@ import (
 	"alrm/check"
 )
 
-type AlrmHost struct {
+type Host struct {
 	Name    string
 	Address string
-	Checks  []check.AlrmCheck
+	Checks  []check.Check
 }
 
-func (ah *AlrmHost) GetAddress() string {
+func (ah *Host) GetAddress() string {
 	if ah.Address != "" {
 		return ah.Address
 	}
 	return ah.Name
 }
 
-func (ah *AlrmHost) NewCheck(name string) (check.AlrmCheck, error) {
+func (ah *Host) NewCheck(name string) (check.Check, error) {
 	chk, err := check.NewCheck(name, ah.GetAddress())
 	if err != nil {
 		return nil, err
