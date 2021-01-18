@@ -3,9 +3,7 @@ package config
 import (
 	"alrm/alarm"
 	"alrm/check"
-	"bufio"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -21,7 +19,6 @@ const (
 
 type Parser struct {
 	DebugLevel    int
-	Line          int
 	states        []int
 	lastHost      *Host
 	lastGroup     *Group
@@ -31,18 +28,15 @@ type Parser struct {
 }
 
 func (p *Parser) Parse(fn string) (*Config, error) {
-	file, err := os.Open(fn)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open config \"%s\": %s", fn, err.Error())
-	}
-	defer file.Close()
-
 	config := NewConfig()
+	tok, err := NewTokenizer(fn)
+	if err != nil {
+		return nil, err
+	}
+	defer tok.Close()
 
-	scan := bufio.NewScanner(file)
-	scan.Split(p.Split)
-	for scan.Scan() {
-		tk := scan.Text()
+	for tok.Scan() {
+		tk := tok.Text()
 	stateswitch:
 		switch p.state() {
 		case TK_NONE:
@@ -55,29 +49,29 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				p.setState(TK_ALARM)
 			default:
 				return nil, fmt.Errorf("invalid token in %s, line %d: \"%s\"",
-					fn, p.Line, tk)
+					fn, tok.Line(), tk)
 			}
 
 		case TK_SET:
 			key := strings.ToLower(tk)
-			if !scan.Scan() {
+			if !tok.Scan() {
 				return nil, fmt.Errorf("empty value name for set in %s, line %d",
-					fn, p.Line)
+					fn, tok.Line())
 			}
 
-			value := scan.Text()
+			value := tok.Text()
 			switch key {
 			case "interval":
 				err := config.SetInterval(value)
 				if err != nil {
 					return nil, fmt.Errorf(
 						"invalid number for interval in %s, line %d: \"%s\"",
-						fn, p.Line, value,
+						fn, tok.Line(), value,
 					)
 				}
 			default:
 				return nil, fmt.Errorf("unknown key for set in %s, line %d: \"%s\"",
-					fn, p.Line, tk,
+					fn, tok.Line(), tk,
 				)
 			}
 			p.prevState()
@@ -100,7 +94,7 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				p.lastGroup, err = config.NewGroup(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, p.Line,
+						err.Error(), fn, tok.Line(),
 					)
 				}
 				continue
@@ -121,7 +115,7 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				p.lastGroup, err = config.NewGroup(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, p.Line,
+						err.Error(), fn, tok.Line(),
 					)
 				}
 			}
@@ -130,7 +124,7 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				p.lastHost, err = p.lastGroup.NewHost(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, p.Line,
+						err.Error(), fn, tok.Line(),
 					)
 				}
 				continue
@@ -138,11 +132,11 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 
 			switch strings.ToLower(tk) {
 			case "address":
-				if !scan.Scan() {
+				if !tok.Scan() {
 					return nil, fmt.Errorf("empty address for host in %s, line %d",
-						fn, p.Line)
+						fn, tok.Line())
 				}
-				p.lastHost.Address = scan.Text()
+				p.lastHost.Address = tok.Text()
 
 			case "check":
 				p.setState(TK_CHECK)
@@ -157,14 +151,14 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				p.lastCheck, err = p.lastHost.NewCheck(tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, p.Line)
+						err.Error(), fn, tok.Line())
 				}
 				continue
 			}
 			cont, err := p.lastCheck.Parse(tk)
 			if err != nil {
 				return nil, fmt.Errorf("%s in %s, line %d",
-					err.Error(), fn, p.Line)
+					err.Error(), fn, tok.Line())
 			}
 			if !cont {
 				p.lastCheck = nil
@@ -182,7 +176,7 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				p.lastAlarm, err = config.NewAlarm(p.lastAlarmName, tk)
 				if err != nil {
 					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, p.Line)
+						err.Error(), fn, tok.Line())
 				}
 				p.lastAlarmName = ""
 				continue
@@ -190,7 +184,7 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 			cont, err := p.lastAlarm.Parse(tk)
 			if err != nil {
 				return nil, fmt.Errorf("%s in %s, line %d",
-					err.Error(), fn, p.Line)
+					err.Error(), fn, tok.Line())
 			}
 			if !cont {
 				p.lastAlarm = nil
@@ -202,7 +196,7 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 			return nil, fmt.Errorf("unknown parser state: %d", p.state())
 		}
 	}
-	if err := scan.Err(); err != nil {
+	if err := tok.Err(); err != nil {
 		return nil, err
 	}
 	return config, nil
@@ -250,7 +244,7 @@ func (p *Parser) stateName() string {
 	case TK_SET:
 		return "TK_SET"
 	case TK_MONITOR:
-		return "TK_MONTIOR"
+		return "TK_MONITOR"
 	case TK_GROUP:
 		return "TK_GROUP"
 	case TK_HOST:
@@ -262,76 +256,4 @@ func (p *Parser) stateName() string {
 	default:
 		return "UNKNOWN"
 	}
-}
-
-func (p *Parser) Split(data []byte, atEOF bool) (int, []byte, error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-
-	var ignoreline bool
-	var started bool
-	var startidx int
-	var quote byte
-
-	for i := 0; i < len(data); i++ {
-		c := data[i]
-		//fmt.Printf("%c (%t) (%t)\n", c, started, ignoreline)
-		switch c {
-		case '\f', '\n', '\r':
-			p.Line++
-			if ignoreline {
-				ignoreline = false
-				continue
-			}
-			fallthrough
-
-		case ' ', '\t', '\v':
-			if started && quote == 0 {
-				return i + 1, data[startidx:i], nil
-			}
-
-		case '\'', '"', '`':
-			// When the quote ends
-			if quote == c {
-				// if we've gotten data, return it
-				if started {
-					return i + 1, data[startidx:i], nil
-				}
-				// if we haven't return nothing
-				return i + 1, []byte{}, nil
-			}
-
-			// start a quoted string
-			if !ignoreline && quote == 0 {
-				quote = c
-			}
-
-		case '#':
-			if !started {
-				ignoreline = true
-			}
-
-		default:
-			if !ignoreline && !started {
-				started = true
-				startidx = i
-			}
-		}
-	}
-
-	if atEOF {
-		if quote != 0 {
-			return 0, nil, fmt.Errorf("unterminated quote")
-		}
-
-		if ignoreline {
-			return len(data), nil, nil
-		}
-		if started {
-			return len(data), data[startidx:], nil
-		}
-	}
-
-	return 0, nil, nil
 }
