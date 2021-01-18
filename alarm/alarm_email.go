@@ -7,11 +7,10 @@ import (
 
 const (
 	TK_NONE = iota
-  TK_TO
-  TK_SMTP
-  TK_FROM
+	TK_TO
+	TK_SMTP
+	TK_FROM
 )
-
 
 type AlarmEmail struct {
 	Type  string
@@ -29,44 +28,44 @@ func NewAlarmEmail(name string) *AlarmEmail {
 }
 
 func (a *AlarmEmail) Alarm() error {
-	fmt.Printf("email alarm")
+	fmt.Printf("email alarm\n")
 	return nil
 }
 
 func (a *AlarmEmail) Parse(tk string) (bool, error) {
 	switch a.state {
-		case TK_NONE:
-			switch strings.ToLower(tk){
-				case "to":
-					a.state = TK_TO
-				case "from":
-					a.state = TK_FROM
-				case "smtp":
-					a.state = TK_SMTP
-				default:
-					if len(a.To) < 1 {
-						return false, fmt.Errorf("email alarm requires to address")
-					}
-					return false, nil
-			}
-
-		case TK_FROM:
-			a.From = tk
-			a.state = TK_NONE
-
-		case TK_SMTP:
-			a.SMTP = tk
-			a.state = TK_NONE
-
-		case TK_TO:
-			if strings.TrimSpace(tk) == "" {
-				return false, fmt.Errorf("to address cannot be empty")
-			}
-			a.To = append(a.To, tk)
-			a.state = TK_NONE
-
+	case TK_NONE:
+		switch strings.ToLower(tk) {
+		case "to":
+			a.state = TK_TO
+		case "from":
+			a.state = TK_FROM
+		case "smtp":
+			a.state = TK_SMTP
 		default:
-			return false, fmt.Errorf("invalid state in alarm_email")
+			if len(a.To) < 1 {
+				return false, fmt.Errorf("email alarm requires to address")
+			}
+			return false, nil
+		}
+
+	case TK_FROM:
+		a.From = tk
+		a.state = TK_NONE
+
+	case TK_SMTP:
+		a.SMTP = tk
+		a.state = TK_NONE
+
+	case TK_TO:
+		if strings.TrimSpace(tk) == "" {
+			return false, fmt.Errorf("to address cannot be empty")
+		}
+		a.To = append(a.To, tk)
+		a.state = TK_NONE
+
+	default:
+		return false, fmt.Errorf("invalid state in alarm_email")
 	}
 	return true, nil
 }

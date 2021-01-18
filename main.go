@@ -49,10 +49,10 @@ func main() {
 
 		fmt.Printf("config is OK\n")
 
-	case "check":
-		tn := flag.Arg(1)
-		if tn == "" {
-			fmt.Fprintf(os.Stderr, "check requires a host or group\n")
+	case "alarm":
+		an := flag.Arg(1)
+		if an == "" {
+			fmt.Fprintf(os.Stderr, "alarm name required\n")
 			os.Exit(1)
 		}
 
@@ -62,20 +62,46 @@ func main() {
 			os.Exit(1)
 		}
 
-		group, exists := cfg.Groups[tn]
+		al, exists := cfg.Alarms[an]
 		if !exists {
 			fmt.Fprintf(os.Stderr, "group or host is not defined\n")
 			os.Exit(1)
 		}
 
-		err = group.Check(*debuglvl)
+		err = al.Alarm()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "alarm failed: %s\n", err.Error())
+			os.Exit(1)
+		}
+		fmt.Printf("alarm sounded successfully\n")
+
+	case "check":
+		cn := flag.Arg(1)
+		if cn == "" {
+			fmt.Fprintf(os.Stderr, "check host or group name required\n")
+			os.Exit(1)
+		}
+
+		cfg, err := config.ReadConfig(*cfgPath, 0)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+
+		gr, exists := cfg.Groups[cn]
+		if !exists {
+			fmt.Fprintf(os.Stderr, "group or host is not defined\n")
+			os.Exit(1)
+		}
+
+		err = gr.Check(*debuglvl)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "check failed: %s\n", err.Error())
 			os.Exit(1)
 		}
 		fmt.Printf("check successful\n")
 
-	case "":
+	case "help", "":
 		printUsage()
 
 	default:
@@ -92,4 +118,5 @@ func printUsage() {
 	fmt.Printf("Actions:\n")
 	fmt.Printf("  verify configuration:     %s [args] config\n", os.Args[0])
 	fmt.Printf("  run a check manually:     %s [args] check <host/group>\n", os.Args[0])
+	fmt.Printf("  test an alarm:            %s [args] alarm <name>\n", os.Args[0])
 }
