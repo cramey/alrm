@@ -1,8 +1,3 @@
-"one" "two three"
+"one" 'two' `three`
 
-"four five"
-
-" #six" "" "seven" "ei" "ght"
-
-"multi
-line"
+`four` 'five' "six"

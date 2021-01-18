@@ -1,26 +1,48 @@
 package config
 
 import (
-	"testing"
 	"encoding/json"
+	"testing"
 )
 
-func TestTokenizer(t *testing.T) {
-	runTest(t, "simple",
+func TestSimpleSpaces(t *testing.T) {
+	runTest(t, "simple-spaces",
 		`[["one","two","three","four","five","six"]]`,
 	)
-	runTest(t, "simple-broken",
+}
+
+func TestSimpleMultiline(t *testing.T) {
+	runTest(t, "simple-multiline",
 		`[["one","two","three"],["four","five"],[],[],["six"]]`,
 	)
-	runTest(t, "comments",
-	 `[[],["one","two","three"],[],["four","five","six"]]`,
-	)
+}
+
+func TestQuotes(t *testing.T) {
 	runTest(t, "quotes",
-	 `[["one","two three",[],["four five"],[],[" #six","","seven","ei","ght"],[],["multi\nline"]]`,
+		`[["one","two","three"],[],["four","five","six"]]`,
+	)
+}
+
+func TestQuotesMultiline(t *testing.T) {
+	runTest(t, "quotes-multiline",
+		`[["one\ntwo"],["three\nfour"],[],[],["five\n  six"]]`,
+	)
+}
+
+func TestComments(t *testing.T) {
+	runTest(t, "comments",
+		`[[],["one"],[],["two"],[],["three"]]`,
+	)
+}
+
+func TestCommentsInline(t *testing.T) {
+	runTest(t, "comments-inline",
+		`[["one"],["two#three"],[],["four"]]`,
 	)
 }
 
 func runTest(t *testing.T, bn string, exp string) {
+	t.Logf("Running testdata/%s.tok.. ", bn)
 	tok, err := NewTokenizer("testdata/" + bn + ".tok")
 	if err != nil {
 		t.Fatalf("%s", err.Error())
@@ -49,7 +71,7 @@ func runTest(t *testing.T, bn string, exp string) {
 
 	if exp != string(out) {
 		t.Logf("Expected: %s", exp)
-		t.Logf("Got: %s", out)
-		t.Fail()
+		t.Logf("Got:      %s", out)
+		t.FailNow()
 	}
 }

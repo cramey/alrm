@@ -1,9 +1,9 @@
 package config
 
 import (
+	"alrm/alarm"
 	"fmt"
 	"time"
-	"alrm/alarm"
 )
 
 type Config struct {

@@ -8,13 +8,13 @@ import (
 )
 
 const (
-	TK_NONE = iota
-	TK_SET
-	TK_MONITOR
-	TK_GROUP
-	TK_HOST
-	TK_CHECK
-	TK_ALARM
+	PR_NONE = iota
+	PR_SET
+	PR_MONITOR
+	PR_GROUP
+	PR_HOST
+	PR_CHECK
+	PR_ALARM
 )
 
 type Parser struct {
@@ -39,20 +39,20 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 		tk := tok.Text()
 	stateswitch:
 		switch p.state() {
-		case TK_NONE:
+		case PR_NONE:
 			switch strings.ToLower(tk) {
 			case "monitor":
-				p.setState(TK_MONITOR)
+				p.setState(PR_MONITOR)
 			case "set":
-				p.setState(TK_SET)
+				p.setState(PR_SET)
 			case "alarm":
-				p.setState(TK_ALARM)
+				p.setState(PR_ALARM)
 			default:
 				return nil, fmt.Errorf("invalid token in %s, line %d: \"%s\"",
 					fn, tok.Line(), tk)
 			}
 
-		case TK_SET:
+		case PR_SET:
 			key := strings.ToLower(tk)
 			if !tok.Scan() {
 				return nil, fmt.Errorf("empty value name for set in %s, line %d",
@@ -76,20 +76,20 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 			}
 			p.prevState()
 
-		case TK_MONITOR:
+		case PR_MONITOR:
 			switch strings.ToLower(tk) {
 			case "host":
-				p.setState(TK_HOST)
+				p.setState(PR_HOST)
 
 			case "group":
-				p.setState(TK_GROUP)
+				p.setState(PR_GROUP)
 
 			default:
 				p.prevState()
 				goto stateswitch
 			}
 
-		case TK_GROUP:
+		case PR_GROUP:
 			if p.lastGroup == nil {
 				p.lastGroup, err = config.NewGroup(tk)
 				if err != nil {
@@ -102,14 +102,14 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 
 			switch strings.ToLower(tk) {
 			case "host":
-				p.setState(TK_HOST)
+				p.setState(PR_HOST)
 
 			default:
 				p.prevState()
 				goto stateswitch
 			}
 
-		case TK_HOST:
+		case PR_HOST:
 			// If a host has no group, inherit the host name
 			if p.lastGroup == nil {
 				p.lastGroup, err = config.NewGroup(tk)
@@ -139,14 +139,14 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				p.lastHost.Address = tok.Text()
 
 			case "check":
-				p.setState(TK_CHECK)
+				p.setState(PR_CHECK)
 
 			default:
 				p.prevState()
 				goto stateswitch
 			}
 
-		case TK_CHECK:
+		case PR_CHECK:
 			if p.lastCheck == nil {
 				p.lastCheck, err = p.lastHost.NewCheck(tk)
 				if err != nil {
@@ -166,7 +166,7 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				goto stateswitch
 			}
 
-		case TK_ALARM:
+		case PR_ALARM:
 			if p.lastAlarm == nil {
 				if p.lastAlarmName == "" {
 					p.lastAlarmName = tk
@@ -204,19 +204,19 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 
 func (p *Parser) state() int {
 	if len(p.states) < 1 {
-		return TK_NONE
+		return PR_NONE
 	}
 	return p.states[len(p.states)-1]
 }
 
 func (p *Parser) setState(state int) {
 	switch state {
-	case TK_SET, TK_MONITOR:
+	case PR_SET, PR_MONITOR:
 		fallthrough
-	case TK_GROUP:
+	case PR_GROUP:
 		p.lastGroup = nil
 		fallthrough
-	case TK_HOST:
+	case PR_HOST:
 		p.lastHost = nil
 		p.lastCheck = nil
 	}
@@ -239,20 +239,20 @@ func (p *Parser) prevState() int {
 
 func (p *Parser) stateName() string {
 	switch p.state() {
-	case TK_NONE:
-		return "TK_NONE"
-	case TK_SET:
-		return "TK_SET"
-	case TK_MONITOR:
-		return "TK_MONITOR"
-	case TK_GROUP:
-		return "TK_GROUP"
-	case TK_HOST:
-		return "TK_HOST"
-	case TK_CHECK:
-		return "TK_CHECK"
-	case TK_ALARM:
-		return "TK_ALARM"
+	case PR_NONE:
+		return "PR_NONE"
+	case PR_SET:
+		return "PR_SET"
+	case PR_MONITOR:
+		return "PR_MONITOR"
+	case PR_GROUP:
+		return "PR_GROUP"
+	case PR_HOST:
+		return "PR_HOST"
+	case PR_CHECK:
+		return "PR_CHECK"
+	case PR_ALARM:
+		return "PR_ALARM"
 	default:
 		return "UNKNOWN"
 	}
