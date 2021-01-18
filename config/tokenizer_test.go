@@ -29,6 +29,12 @@ func TestQuotesMultiline(t *testing.T) {
 	)
 }
 
+func TestQuotesEmpty(t *testing.T) {
+	runTest(t, "quotes-empty",
+		`[["one","","three"],["","five",""],["seven"]]`,
+	)
+}
+
 func TestComments(t *testing.T) {
 	runTest(t, "comments",
 		`[[],["one"],[],["two"],[],["three"]]`,

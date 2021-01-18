@@ -131,9 +131,7 @@ func (t *Tokenizer) Scan() bool {
 
 end:
 	if t.err == nil || t.err == io.EOF {
-		if b.Len() > 0 {
-			t.text = b.String()
-		}
+		t.text = b.String()
 	}
 	return t.err == nil
 }
