@@ -35,7 +35,7 @@ func NewAlarmEmail(name string) *AlarmEmail {
 	}
 }
 
-func (a *AlarmEmail) Alarm() error {
+func (a *AlarmEmail) Alarm(grp string, host string, chk string, cerr error) error {
 	c, err := smtp.Dial(a.SMTP)
 	if err != nil {
 		return err
@@ -68,7 +68,8 @@ func (a *AlarmEmail) Alarm() error {
 
 	msg := fmt.Sprintf("From: %s\r\n", a.From)
 	msg += fmt.Sprintf("To: %s\r\n", strings.Join(a.To, ";"))
-	msg += fmt.Sprintf("Subject: %s\r\n", "test subject")
+	msg += fmt.Sprintf("Subject: %s\r\n\r\n", "test subject")
+	msg += fmt.Sprintf("%s", cerr.Error())
 
 	_, err = fmt.Fprintf(m, "%s", msg)
 	if err != nil {
@@ -112,6 +113,10 @@ func (a *AlarmEmail) Parse(tk string) (bool, error) {
 	case TK_SMTP:
 		if strings.TrimSpace(tk) == "" {
 			return false, fmt.Errorf("smtp server cannot be empty")
+		}
+		// If the smtp host doesn't contain a port, add the default
+		if !strings.Contains(tk, ":") {
+			tk += ":25"
 		}
 		a.SMTP = tk
 		a.state = TK_NONE

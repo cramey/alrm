@@ -3,7 +3,7 @@ set interval 30s
 alarm people email
 	to test1@localhost
 	to test2@localhost
-	smtp localhost:25
+	smtp localhost
 	from alrm@localhost
 
 monitor group webservers

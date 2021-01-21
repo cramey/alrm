@@ -6,7 +6,7 @@ import (
 
 type Alarm interface {
 	Parse(string) (bool, error)
-	Alarm() error
+	Alarm(string,string,string,error) error
 }
 
 func NewAlarm(name string, typename string) (Alarm, error) {

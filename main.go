@@ -16,12 +16,14 @@ func main() {
 	flag.Usage = printUsage
 	flag.Parse()
 
+
 	if *cfgPath == "" {
-		if _, err := os.Stat("./alrmrc"); err == nil {
-			*cfgPath = "./alrmrc"
-		}
-		if _, err := os.Stat("/etc/alrmrc"); err == nil {
-			*cfgPath = "/etc/alrmrc"
+		searchpaths := []string{"/etc/alrmrc", "./alrmrc"}
+		for _, sp := range searchpaths {
+			if _, err := os.Stat(sp); err == nil {
+				*cfgPath = sp
+				break
+			}
 		}
 		if *cfgPath == "" {
 			fmt.Fprintf(os.Stderr, "cannot find configuration\n")
@@ -32,11 +34,16 @@ func main() {
 	command := strings.ToLower(flag.Arg(0))
 	switch command {
 	case "config":
+		if *debuglvl > 0 {
+			fmt.Printf("checking config %s .. \n", *cfgPath)
+		}
+
 		cfg, err := config.ReadConfig(*cfgPath, *debuglvl)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)
 		}
+
 
 		if *debuglvl > 0 {
 			o, err := json.MarshalIndent(cfg, "", "  ")
@@ -68,7 +75,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = al.Alarm()
+		err = al.Alarm(
+			"test group", "test host", "test check",
+			fmt.Errorf("test alarm message"),
+		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "alarm failed: %s\n", err.Error())
 			os.Exit(1)
