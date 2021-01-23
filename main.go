@@ -16,7 +16,6 @@ func main() {
 	flag.Usage = printUsage
 	flag.Parse()
 
-
 	if *cfgPath == "" {
 		searchpaths := []string{"/etc/alrmrc", "./alrmrc"}
 		for _, sp := range searchpaths {
@@ -43,7 +42,6 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)
 		}
-
 
 		if *debuglvl > 0 {
 			o, err := json.MarshalIndent(cfg, "", "  ")
