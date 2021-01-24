@@ -1,8 +1,8 @@
 package alarm
 
 import (
-	"fmt"
 	"alrm/alarm/email"
+	"fmt"
 )
 
 type Alarm interface {

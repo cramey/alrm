@@ -21,6 +21,19 @@ func (a *AlarmEmail) Alarm(grp string, hst string, chk string, alerr error) erro
 		return err
 	}
 
+	if a.User != "" && a.Pass != "" {
+		hostname := a.SMTP
+		hn := strings.Split(a.SMTP, ":")
+		if len(hn) > 1 {
+			hostname = hn[0]
+		}
+		auth := smtp.PlainAuth("", a.User, a.Pass, hostname)
+		err = c.Auth(auth)
+		if err != nil {
+			return err
+		}
+	}
+
 	helo := "localhost"
 	tspl := strings.Split(a.From, "@")
 	if len(tspl) > 1 {
