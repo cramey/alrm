@@ -2,6 +2,7 @@ package alarm
 
 import (
 	"fmt"
+	"alrm/alarm/email"
 )
 
 type Alarm interface {
@@ -12,7 +13,7 @@ type Alarm interface {
 func NewAlarm(name string, typename string) (Alarm, error) {
 	switch typename {
 	case "email":
-		return NewAlarmEmail(name), nil
+		return email.NewAlarmEmail(name), nil
 	default:
 		return nil, fmt.Errorf("unknown alarm name \"%s\"", name)
 	}
