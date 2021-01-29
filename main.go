@@ -109,6 +109,19 @@ func main() {
 		}
 		fmt.Printf("check successful\n")
 
+	case "server":
+		cfg, err := config.ReadConfig(*cfgPath, *debuglvl)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+
+		err = startServer(cfg, *debuglvl)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+
 	case "help", "":
 		printUsage()
 
@@ -127,4 +140,5 @@ func printUsage() {
 	fmt.Printf("  verify configuration:     %s [args] config\n", os.Args[0])
 	fmt.Printf("  run a check manually:     %s [args] check <host/group>\n", os.Args[0])
 	fmt.Printf("  test an alarm:            %s [args] alarm <name>\n", os.Args[0])
+	fmt.Printf("  start server (forground): %s [args] server\n", os.Args[0])
 }

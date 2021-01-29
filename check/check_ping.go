@@ -65,7 +65,7 @@ func (c *CheckPing) Check(debuglvl int) error {
 		}
 	}
 
-	if debuglvl > 0 {
+	if debuglvl > 1 {
 		fmt.Printf("Packet loss: %.f%%\n", stats.PacketLoss)
 		fmt.Printf("Max RTT: %s\n", stats.MaxRtt.String())
 		fmt.Printf("Max Configured RTT: %s\n", c.MaxRTT.String())

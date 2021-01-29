@@ -65,6 +65,14 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				err := config.SetInterval(value)
 				if err != nil {
 					return nil, fmt.Errorf(
+						"invalid duration for interval in %s, line %d: \"%s\"",
+						fn, tok.Line(), value,
+					)
+				}
+			case "threads":
+				err := config.SetThreads(value)
+				if err != nil {
+					return nil, fmt.Errorf(
 						"invalid number for interval in %s, line %d: \"%s\"",
 						fn, tok.Line(), value,
 					)

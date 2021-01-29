@@ -3,6 +3,8 @@ package config
 import (
 	"alrm/alarm"
 	"fmt"
+	"runtime"
+	"strconv"
 	"time"
 )
 
@@ -10,12 +12,15 @@ type Config struct {
 	Groups   map[string]*Group
 	Alarms   map[string]alarm.Alarm
 	Interval time.Duration
+	Threads  int
 }
 
 func NewConfig() *Config {
 	return &Config{
 		// Default check interval, 30 seconds
 		Interval: time.Second * 30,
+		// Default number of threads, use local CPU count
+		Threads: runtime.NumCPU(),
 	}
 }
 
@@ -58,6 +63,16 @@ func (c *Config) SetInterval(val string) error {
 	}
 
 	c.Interval = interval
+	return nil
+}
+
+func (c *Config) SetThreads(val string) error {
+	threads, err := strconv.Atoi(val)
+	if err != nil {
+		return err
+	}
+
+	c.Threads = threads
 	return nil
 }
 
