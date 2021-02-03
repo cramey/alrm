@@ -1,8 +1,8 @@
 package config
 
 import (
-	"alrm/alarm"
 	"fmt"
+	"git.binarythought.com/cdramey/alrm/alarm"
 	"runtime"
 	"strconv"
 	"time"

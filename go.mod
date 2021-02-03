@@ -1,4 +1,4 @@
-module alrm
+module git.binarythought.com/cdramey/alrm
 
 go 1.15
 

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"alrm/config"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"git.binarythought.com/cdramey/alrm/config"
 	"os"
 	"strings"
 )

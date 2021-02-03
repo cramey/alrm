@@ -1,9 +1,9 @@
 package main
 
 import (
-	"alrm/check"
-	"alrm/config"
 	"fmt"
+	"git.binarythought.com/cdramey/alrm/check"
+	"git.binarythought.com/cdramey/alrm/config"
 	"time"
 )
 

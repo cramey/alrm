@@ -1,8 +1,8 @@
 package alarm
 
 import (
-	"alrm/alarm/email"
 	"fmt"
+	"git.binarythought.com/cdramey/alrm/alarm/email"
 )
 
 type Alarm interface {

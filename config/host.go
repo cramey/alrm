@@ -1,7 +1,7 @@
 package config
 
 import (
-	"alrm/check"
+	"git.binarythought.com/cdramey/alrm/check"
 )
 
 type Host struct {

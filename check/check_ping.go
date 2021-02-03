@@ -1,8 +1,8 @@
 package check
 
 import (
-	"alrm/check/ping"
 	"fmt"
+	"git.binarythought.com/cdramey/alrm/check/ping"
 	"strconv"
 	"strings"
 	"time"

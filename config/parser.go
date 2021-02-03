@@ -1,9 +1,9 @@
 package config
 
 import (
-	"alrm/alarm"
-	"alrm/check"
 	"fmt"
+	"git.binarythought.com/cdramey/alrm/alarm"
+	"git.binarythought.com/cdramey/alrm/check"
 	"strings"
 )
 
