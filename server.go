@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
-	"git.binarythought.com/cdramey/alrm/check"
 	"git.binarythought.com/cdramey/alrm/config"
 	"time"
+	"sync"
 )
 
 func startServer(cfg *config.Config, debuglvl int) error {
-	ch := make(chan check.Check, cfg.Threads)
-	for i := 0; i < cfg.Threads; i++ {
-		go worker(ch, debuglvl)
+	m := sync.Mutex{}
+	c := sync.NewCond(&m)
+	for _, g := range cfg.Groups {
+		go worker(g, c, debuglvl)
 	}
 
 	t := time.NewTicker(cfg.Interval)
@@ -21,24 +22,25 @@ func startServer(cfg *config.Config, debuglvl int) error {
 			if debuglvl > 0 {
 				fmt.Printf("Interval check at %s\n", r)
 			}
-			for _, g := range cfg.Groups {
-				for _, h := range g.Hosts {
-					for _, c := range h.Checks {
-						ch <- c
-					}
-				}
-			}
+			c.Broadcast()
 		}
 	}
 	return nil
 }
 
-func worker(ch chan check.Check, debuglvl int) {
+func worker(g *config.Group, c *sync.Cond, debuglvl int) {
 	for {
-		chk := <-ch
-		err := chk.Check(debuglvl)
-		if err != nil {
-			fmt.Printf("Check error: %s\n", err)
+		c.L.Lock()
+		c.Wait()
+		c.L.Unlock()
+
+		for _, h := range g.Hosts {
+			for _, c := range h.Checks {
+				err := c.Check(debuglvl)
+				if err != nil {
+					fmt.Printf("Check error: %s\n", err)
+				}
+			}
 		}
 	}
 }
