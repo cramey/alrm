@@ -3,13 +3,12 @@ package main
 import (
 	"fmt"
 	"git.binarythought.com/cdramey/alrm/config"
-	"time"
 	"sync"
+	"time"
 )
 
 func startServer(cfg *config.Config, debuglvl int) error {
-	m := sync.Mutex{}
-	c := sync.NewCond(&m)
+	c := sync.NewCond(&sync.Mutex{})
 	for _, g := range cfg.Groups {
 		go worker(g, c, debuglvl)
 	}
@@ -30,9 +29,15 @@ func startServer(cfg *config.Config, debuglvl int) error {
 
 func worker(g *config.Group, c *sync.Cond, debuglvl int) {
 	for {
+		if debuglvl > 2 {
+			fmt.Printf("%s goroutine waiting.. \n", g.Name)
+		}
 		c.L.Lock()
 		c.Wait()
 		c.L.Unlock()
+		if debuglvl > 2 {
+			fmt.Printf("%s goroutine wake.. \n", g.Name)
+		}
 
 		for _, h := range g.Hosts {
 			for _, c := range h.Checks {
