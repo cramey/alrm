@@ -10,12 +10,11 @@ type Server struct {
 	workers  []*worker
 	cfg      *config.Config
 	debuglvl int
-	httpsrv  http.Server
 }
 
 func (srv *Server) Start() {
 	for _, w := range srv.workers {
-		go w.start(srv.debuglvl)
+		go w.start()
 	}
 
 	t := time.NewTicker(srv.cfg.Interval)
@@ -26,12 +25,8 @@ func (srv *Server) Start() {
 			if srv.debuglvl > 0 {
 				fmt.Printf("interval check at %s\n", r)
 			}
-
 			for _, w := range srv.workers {
-				select {
-				case w.wake <- true:
-				default:
-				}
+				w.wake()
 			}
 		}
 	}
@@ -40,8 +35,7 @@ func (srv *Server) Start() {
 func NewServer(cfg *config.Config, debuglvl int) *Server {
 	srv := &Server{cfg: cfg, debuglvl: debuglvl}
 	for _, g := range cfg.Groups {
-		w := &worker{group: g, wake: make(chan bool)}
-		srv.workers = append(srv.workers, w)
+		srv.workers = append(srv.workers, makeworker(g, debuglvl))
 	}
 	return srv
 }
