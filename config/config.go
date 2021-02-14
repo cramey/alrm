@@ -10,13 +10,16 @@ type Config struct {
 	Groups   map[string]*Group
 	Alarms   map[string]alarm.Alarm
 	Interval time.Duration
-	Hash     string
+	Listen   string
+	Path     string
 }
 
 func NewConfig() *Config {
 	return &Config{
 		// Default check interval, 30 seconds
 		Interval: time.Second * 30,
+		// Default listen address
+		Listen: "127.0.0.1:8282",
 	}
 }
 

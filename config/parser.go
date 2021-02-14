@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/hex"
 	"fmt"
 	"git.binarythought.com/cdramey/alrm/alarm"
 	"git.binarythought.com/cdramey/alrm/check"
@@ -30,6 +29,7 @@ type Parser struct {
 
 func (p *Parser) Parse(fn string) (*Config, error) {
 	config := NewConfig()
+	config.Path = fn
 	tok, err := NewTokenizer(fn)
 	if err != nil {
 		return nil, err
@@ -70,6 +70,8 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 						fn, tok.Line(), value,
 					)
 				}
+			case "listen":
+				config.Listen = value
 			default:
 				return nil, fmt.Errorf("unknown key for set in %s, line %d: \"%s\"",
 					fn, tok.Line(), tk,
@@ -200,7 +202,6 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 	if err := tok.Err(); err != nil {
 		return nil, err
 	}
-	config.Hash = hex.EncodeToString(tok.Hash.Sum(nil))
 	return config, nil
 }
 

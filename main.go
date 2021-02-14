@@ -5,26 +5,27 @@ import (
 	"flag"
 	"fmt"
 	"git.binarythought.com/cdramey/alrm/config"
+	"git.binarythought.com/cdramey/alrm/server"
 	"os"
 	"strings"
 )
 
 func main() {
-	cfgPath := flag.String("c", "", "path to configuration file")
+	cfgpath := flag.String("c", "", "path to configuration file")
 	debuglvl := flag.Int("d", 0, "debug level")
 
 	flag.Usage = printUsage
 	flag.Parse()
 
-	if *cfgPath == "" {
+	if *cfgpath == "" {
 		searchpaths := []string{"/etc/alrmrc", "./alrmrc"}
 		for _, sp := range searchpaths {
 			if _, err := os.Stat(sp); err == nil {
-				*cfgPath = sp
+				*cfgpath = sp
 				break
 			}
 		}
-		if *cfgPath == "" {
+		if *cfgpath == "" {
 			fmt.Fprintf(os.Stderr, "cannot find configuration\n")
 			os.Exit(1)
 		}
@@ -34,10 +35,10 @@ func main() {
 	switch command {
 	case "config":
 		if *debuglvl > 0 {
-			fmt.Printf("checking config %s .. \n", *cfgPath)
+			fmt.Printf("checking config %s .. \n", *cfgpath)
 		}
 
-		cfg, err := config.ReadConfig(*cfgPath, *debuglvl)
+		cfg, err := config.ReadConfig(*cfgpath, *debuglvl)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)
@@ -61,7 +62,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		cfg, err := config.ReadConfig(*cfgPath, 0)
+		cfg, err := config.ReadConfig(*cfgpath, 0)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)
@@ -90,7 +91,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		cfg, err := config.ReadConfig(*cfgPath, 0)
+		cfg, err := config.ReadConfig(*cfgpath, 0)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)
@@ -110,17 +111,14 @@ func main() {
 		fmt.Printf("check successful\n")
 
 	case "server":
-		cfg, err := config.ReadConfig(*cfgPath, *debuglvl)
+		cfg, err := config.ReadConfig(*cfgpath, *debuglvl)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)
 		}
 
-		err = startServer(cfg, *debuglvl)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-			os.Exit(1)
-		}
+		srv := server.NewServer(cfg, *debuglvl)
+		srv.Start()
 
 	case "help", "":
 		printUsage()

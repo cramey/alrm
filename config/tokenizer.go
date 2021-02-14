@@ -2,9 +2,7 @@ package config
 
 import (
 	"bufio"
-	"crypto/sha256"
 	"fmt"
-	"hash"
 	"io"
 	"os"
 	"strings"
@@ -19,7 +17,6 @@ const (
 )
 
 type Tokenizer struct {
-	Hash    hash.Hash
 	curline int
 	repline int
 	file    *os.File
@@ -36,7 +33,6 @@ func NewTokenizer(fn string) (*Tokenizer, error) {
 		return nil, err
 	}
 
-	tk.Hash = sha256.New()
 	tk.reader = bufio.NewReader(tk.file)
 	return tk, nil
 }
@@ -62,7 +58,6 @@ func (t *Tokenizer) Scan() bool {
 			t.err = fmt.Errorf("invalid utf-8 encoding on line %s", t.repline)
 			break
 		}
-		t.Hash.Write([]byte(string(r)))
 
 		switch state {
 		case TK_NONE:
