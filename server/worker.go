@@ -53,11 +53,11 @@ func (w *worker) shutdown() {
 
 func makeworker(g *config.Group, d int) *worker {
 	return &worker{
-		group:     g,
-		debuglvl:  d,
+		group:    g,
+		debuglvl: d,
 		// This channel is unbuffered so that checks that take
 		// over the set interval don't backlog
-		wakec:     make(chan bool),
+		wakec: make(chan bool),
 		// This channel is buffered because we want it to remember
 		// an order to shutdown
 		shutdownc: make(chan bool, 1),

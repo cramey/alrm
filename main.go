@@ -111,14 +111,24 @@ func main() {
 		fmt.Printf("check successful\n")
 
 	case "server":
-		cfg, err := config.ReadConfig(*cfgpath, *debuglvl)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-			os.Exit(1)
-		}
+		for {
+			cfg, err := config.ReadConfig(*cfgpath, *debuglvl)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				os.Exit(1)
+			}
 
-		srv := server.NewServer(cfg, *debuglvl)
-		srv.Start()
+			srv := server.NewServer(cfg, *debuglvl)
+
+			r, err := srv.Start()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				os.Exit(1)
+			}
+			if !r {
+				return
+			}
+		}
 
 	case "help", "":
 		printUsage()
