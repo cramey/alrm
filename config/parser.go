@@ -72,6 +72,8 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 				}
 			case "listen":
 				config.Listen = value
+			case "apikey":
+				config.APIKey = value
 			default:
 				return nil, fmt.Errorf("unknown key for set in %s, line %d: \"%s\"",
 					fn, tok.Line(), tk,

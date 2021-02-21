@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"git.binarythought.com/cdramey/alrm/alarm"
+	"github.com/denisbrodbeck/machineid"
 	"time"
 )
 
@@ -12,6 +13,7 @@ type Config struct {
 	Interval time.Duration
 	Listen   string
 	Path     string
+	APIKey   string
 }
 
 func NewConfig() *Config {
@@ -71,5 +73,13 @@ func ReadConfig(fn string, debuglvl int) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	if config.APIKey == "" {
+		key, err := machineid.ProtectedID("alrm")
+		if err != nil {
+			return nil, fmt.Errorf("could not generate machine id for api key")
+		}
+		config.APIKey = key
+	}
+
 	return config, nil
 }
