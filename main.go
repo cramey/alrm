@@ -118,7 +118,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			srv := server.NewServer(cfg, *debuglvl)
+			srv := server.NewServer(cfg)
 
 			r, err := srv.Start()
 			if err != nil {

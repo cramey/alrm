@@ -13,7 +13,6 @@ type Server struct {
 	workers   []*worker
 	cfg       *config.Config
 	shutdownc chan bool
-	debuglvl  int
 	http      http.Server
 }
 
@@ -35,7 +34,7 @@ func (srv *Server) Start() (bool, error) {
 	for {
 		select {
 		case r := <-t.C:
-			if srv.debuglvl > 0 {
+			if srv.cfg.DebugLevel > 0 {
 				fmt.Printf("interval check at %s\n", r)
 			}
 			for _, w := range srv.workers {
@@ -51,15 +50,14 @@ func (srv *Server) Start() (bool, error) {
 	}
 }
 
-func NewServer(cfg *config.Config, debuglvl int) *Server {
+func NewServer(cfg *config.Config) *Server {
 	srv := &Server{
 		cfg:       cfg,
-		debuglvl:  debuglvl,
 		shutdownc: make(chan bool, 1),
 	}
 	for _, g := range cfg.Groups {
 		srv.workers = append(
-			srv.workers, makeworker(g, debuglvl),
+			srv.workers, makeworker(g, cfg.DebugLevel),
 		)
 	}
 	return srv
