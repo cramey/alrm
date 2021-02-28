@@ -17,8 +17,8 @@ const (
 	PR_ALARM
 )
 
-type Parser struct {
-	DebugLevel    int
+type parser struct {
+	config        *Config
 	states        []int
 	lastHost      *Host
 	lastGroup     *Group
@@ -27,12 +27,10 @@ type Parser struct {
 	lastAlarmName string
 }
 
-func (p *Parser) Parse(fn string) (*Config, error) {
-	config := NewConfig()
-	config.Path = fn
-	tok, err := NewTokenizer(fn)
+func (p *parser) parse() error {
+	tok, err := NewTokenizer(p.config.Path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer tok.Close()
 
@@ -49,34 +47,36 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 			case "alarm":
 				p.setState(PR_ALARM)
 			default:
-				return nil, fmt.Errorf("invalid token in %s, line %d: \"%s\"",
-					fn, tok.Line(), tk)
+				return fmt.Errorf("invalid token in %s, line %d: \"%s\"",
+					p.config.Path, tok.Line(), tk)
 			}
 
 		case PR_SET:
 			key := strings.ToLower(tk)
 			if !tok.Scan() {
-				return nil, fmt.Errorf("empty value name for set in %s, line %d",
-					fn, tok.Line())
+				return fmt.Errorf("empty value name for set in %s, line %d",
+					p.config.Path, tok.Line())
 			}
 
 			value := tok.Text()
 			switch key {
 			case "interval":
-				err := config.SetInterval(value)
+				err := p.config.SetInterval(value)
 				if err != nil {
-					return nil, fmt.Errorf(
+					return fmt.Errorf(
 						"invalid duration for interval in %s, line %d: \"%s\"",
-						fn, tok.Line(), value,
+						p.config.Path, tok.Line(), value,
 					)
 				}
 			case "listen":
-				config.Listen = value
-			case "apikey":
-				config.APIKey = value
+				p.config.Listen = value
+			case "api.key":
+				p.config.APIKey = value
+			case "api.keyfile":
+				p.config.APIKeyFile = value
 			default:
-				return nil, fmt.Errorf("unknown key for set in %s, line %d: \"%s\"",
-					fn, tok.Line(), tk,
+				return fmt.Errorf("unknown key for set in %s, line %d: \"%s\"",
+					p.config.Path, tok.Line(), tk,
 				)
 			}
 			p.prevState()
@@ -96,10 +96,10 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 
 		case PR_GROUP:
 			if p.lastGroup == nil {
-				p.lastGroup, err = config.NewGroup(tk)
+				p.lastGroup, err = p.config.NewGroup(tk)
 				if err != nil {
-					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, tok.Line(),
+					return fmt.Errorf("%s in %s, line %d",
+						err.Error(), p.config.Path, tok.Line(),
 					)
 				}
 				continue
@@ -117,10 +117,10 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 		case PR_HOST:
 			// If a host has no group, inherit the host name
 			if p.lastGroup == nil {
-				p.lastGroup, err = config.NewGroup(tk)
+				p.lastGroup, err = p.config.NewGroup(tk)
 				if err != nil {
-					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, tok.Line(),
+					return fmt.Errorf("%s in %s, line %d",
+						err.Error(), p.config.Path, tok.Line(),
 					)
 				}
 			}
@@ -128,8 +128,8 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 			if p.lastHost == nil {
 				p.lastHost, err = p.lastGroup.NewHost(tk)
 				if err != nil {
-					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, tok.Line(),
+					return fmt.Errorf("%s in %s, line %d",
+						err.Error(), p.config.Path, tok.Line(),
 					)
 				}
 				continue
@@ -138,8 +138,8 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 			switch strings.ToLower(tk) {
 			case "address":
 				if !tok.Scan() {
-					return nil, fmt.Errorf("empty address for host in %s, line %d",
-						fn, tok.Line())
+					return fmt.Errorf("empty address for host in %s, line %d",
+						p.config.Path, tok.Line())
 				}
 				p.lastHost.Address = tok.Text()
 
@@ -155,15 +155,15 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 			if p.lastCheck == nil {
 				p.lastCheck, err = p.lastHost.NewCheck(tk)
 				if err != nil {
-					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, tok.Line())
+					return fmt.Errorf("%s in %s, line %d",
+						err.Error(), p.config.Path, tok.Line())
 				}
 				continue
 			}
 			cont, err := p.lastCheck.Parse(tk)
 			if err != nil {
-				return nil, fmt.Errorf("%s in %s, line %d",
-					err.Error(), fn, tok.Line())
+				return fmt.Errorf("%s in %s, line %d",
+					err.Error(), p.config.Path, tok.Line())
 			}
 			if !cont {
 				p.lastCheck = nil
@@ -178,18 +178,18 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 					continue
 				}
 
-				p.lastAlarm, err = config.NewAlarm(p.lastAlarmName, tk)
+				p.lastAlarm, err = p.config.NewAlarm(p.lastAlarmName, tk)
 				if err != nil {
-					return nil, fmt.Errorf("%s in %s, line %d",
-						err.Error(), fn, tok.Line())
+					return fmt.Errorf("%s in %s, line %d",
+						err.Error(), p.config.Path, tok.Line())
 				}
 				p.lastAlarmName = ""
 				continue
 			}
 			cont, err := p.lastAlarm.Parse(tk)
 			if err != nil {
-				return nil, fmt.Errorf("%s in %s, line %d",
-					err.Error(), fn, tok.Line())
+				return fmt.Errorf("%s in %s, line %d",
+					err.Error(), p.config.Path, tok.Line())
 			}
 			if !cont {
 				p.lastAlarm = nil
@@ -198,23 +198,23 @@ func (p *Parser) Parse(fn string) (*Config, error) {
 			}
 
 		default:
-			return nil, fmt.Errorf("unknown parser state: %d", p.state())
+			return fmt.Errorf("unknown parser state: %d", p.state())
 		}
 	}
 	if err := tok.Err(); err != nil {
-		return nil, err
+		return err
 	}
-	return config, nil
+	return nil
 }
 
-func (p *Parser) state() int {
+func (p *parser) state() int {
 	if len(p.states) < 1 {
 		return PR_NONE
 	}
 	return p.states[len(p.states)-1]
 }
 
-func (p *Parser) setState(state int) {
+func (p *parser) setState(state int) {
 	switch state {
 	case PR_SET, PR_MONITOR:
 		fallthrough
@@ -226,23 +226,23 @@ func (p *Parser) setState(state int) {
 		p.lastCheck = nil
 	}
 
-	if p.DebugLevel > 1 {
+	if p.config.DebugLevel > 1 {
 		fmt.Printf("Parser state: %s", p.stateName())
 	}
 	p.states = append(p.states, state)
-	if p.DebugLevel > 1 {
+	if p.config.DebugLevel > 1 {
 		fmt.Printf(" -> %s\n", p.stateName())
 	}
 }
 
-func (p *Parser) prevState() int {
+func (p *parser) prevState() int {
 	if len(p.states) > 0 {
 		p.states = p.states[:len(p.states)-1]
 	}
 	return p.state()
 }
 
-func (p *Parser) stateName() string {
+func (p *parser) stateName() string {
 	switch p.state() {
 	case PR_NONE:
 		return "PR_NONE"

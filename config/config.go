@@ -3,26 +3,19 @@ package config
 import (
 	"fmt"
 	"git.binarythought.com/cdramey/alrm/alarm"
-	"github.com/denisbrodbeck/machineid"
+	"os"
 	"time"
 )
 
 type Config struct {
-	Groups   map[string]*Group
-	Alarms   map[string]alarm.Alarm
-	Interval time.Duration
-	Listen   string
-	Path     string
-	APIKey   string
-}
-
-func NewConfig() *Config {
-	return &Config{
-		// Default check interval, 30 seconds
-		Interval: time.Second * 30,
-		// Default listen address
-		Listen: "127.0.0.1:8282",
-	}
+	Groups     map[string]*Group
+	Alarms     map[string]alarm.Alarm
+	Interval   time.Duration
+	DebugLevel int
+	Listen     string
+	Path       string
+	APIKey     string
+	APIKeyFile string
 }
 
 func (c *Config) NewAlarm(name string, typename string) (alarm.Alarm, error) {
@@ -68,18 +61,29 @@ func (c *Config) SetInterval(val string) error {
 }
 
 func ReadConfig(fn string, debuglvl int) (*Config, error) {
-	parser := &Parser{DebugLevel: debuglvl}
-	config, err := parser.Parse(fn)
-	if err != nil {
-		return nil, err
-	}
-	if config.APIKey == "" {
-		key, err := machineid.ProtectedID("alrm")
-		if err != nil {
-			return nil, fmt.Errorf("could not generate machine id for api key")
-		}
-		config.APIKey = key
+	cfg := &Config{
+		// Default check interval, 30 seconds
+		Interval: time.Second * 30,
+		// Default listen address
+		Listen:     "127.0.0.1:8282",
+		DebugLevel: debuglvl,
+		Path:       fn,
+		// API keyfile defaults to alrmrc.key
+		APIKeyFile: fn + ".key",
 	}
 
-	return config, nil
+	pr := &parser{config: cfg}
+	if err := pr.parse(); err != nil {
+		return nil, err
+	}
+
+	if cfg.APIKey == "" {
+		b, err := os.ReadFile(cfg.APIKeyFile)
+		if err != nil {
+			return nil, err
+		}
+		cfg.APIKey = string(b)
+	}
+
+	return cfg, nil
 }
