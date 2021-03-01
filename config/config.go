@@ -14,7 +14,7 @@ type Config struct {
 	DebugLevel int
 	Listen     string
 	Path       string
-	APIKey     string
+	APIKey     []byte
 	APIKeyFile string
 }
 
@@ -77,12 +77,12 @@ func ReadConfig(fn string, debuglvl int) (*Config, error) {
 		return nil, err
 	}
 
-	if cfg.APIKey == "" {
+	if len(cfg.APIKey) == 0 {
 		b, err := os.ReadFile(cfg.APIKeyFile)
 		if err != nil {
 			return nil, err
 		}
-		cfg.APIKey = string(b)
+		cfg.APIKey = b
 	}
 
 	return cfg, nil

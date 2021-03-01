@@ -11,13 +11,13 @@ import (
 
 type Server struct {
 	workers   []*worker
-	cfg       *config.Config
+	config    *config.Config
 	shutdownc chan bool
 	http      http.Server
 }
 
 func (srv *Server) Start() (bool, error) {
-	listen, err := net.Listen("tcp", srv.cfg.Listen)
+	listen, err := net.Listen("tcp", srv.config.Listen)
 	if err != nil {
 		return false, err
 	}
@@ -29,12 +29,12 @@ func (srv *Server) Start() (bool, error) {
 	srv.http = http.Server{Handler: srv}
 	go srv.http.Serve(listen)
 
-	t := time.NewTicker(srv.cfg.Interval)
+	t := time.NewTicker(srv.config.Interval)
 	defer t.Stop()
 	for {
 		select {
 		case r := <-t.C:
-			if srv.cfg.DebugLevel > 0 {
+			if srv.config.DebugLevel > 0 {
 				fmt.Printf("interval check at %s\n", r)
 			}
 			for _, w := range srv.workers {
@@ -52,7 +52,7 @@ func (srv *Server) Start() (bool, error) {
 
 func NewServer(cfg *config.Config) *Server {
 	srv := &Server{
-		cfg:       cfg,
+		config:    cfg,
 		shutdownc: make(chan bool, 1),
 	}
 	for _, g := range cfg.Groups {

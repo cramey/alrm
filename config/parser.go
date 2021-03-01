@@ -71,7 +71,7 @@ func (p *parser) parse() error {
 			case "listen":
 				p.config.Listen = value
 			case "api.key":
-				p.config.APIKey = value
+				p.config.APIKey = []byte(value)
 			case "api.keyfile":
 				p.config.APIKeyFile = value
 			default:
