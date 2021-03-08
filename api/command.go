@@ -15,6 +15,14 @@ type Command struct {
 	Signature []byte    `json:"sig,omitempty"`
 }
 
+func NewCommand(cm string) *Command {
+	return &Command{
+		Expires: time.Now().Add(time.Second * 5),
+		Command: cm,
+		Scheme:  "hmac-sha256",
+	}
+}
+
 func ParseCommand(jsn []byte) (*Command, error) {
 	cmd := &Command{}
 	err := json.Unmarshal(jsn, cmd)

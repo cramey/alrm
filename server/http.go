@@ -2,22 +2,27 @@ package server
 
 import (
 	"fmt"
-	"net/http"
 	"git.binarythought.com/cdramey/alrm/api"
+	"net/http"
 )
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/api":
-		g := r.URL.Query()
-		c := g.Get("cmd")
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, fmt.Sprintf("form parse error: %s", err.Error()),
+				http.StatusBadRequest)
+			return
+		}
+
+		c := r.FormValue("cmd")
 		if c == "" {
 			http.Error(w, "no command given", http.StatusBadRequest)
 			return
 		}
 		cmd, err := api.ParseCommand([]byte(c))
 		if err != nil {
-			http.Error(w, fmt.Sprintf("error parsing command: %s", err.Error()),
+			http.Error(w, fmt.Sprintf("command parse error: %s", err.Error()),
 				http.StatusBadRequest)
 			return
 		}

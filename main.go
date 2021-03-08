@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"git.binarythought.com/cdramey/alrm/config"
 	"git.binarythought.com/cdramey/alrm/server"
+	"git.binarythought.com/cdramey/alrm/client"
 	"os"
 	"strings"
 )
@@ -130,6 +131,32 @@ func main() {
 			}
 		}
 
+	case "shutdown":
+		cfg, err := config.ReadConfig(*cfgpath, 0)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+
+		err = client.Shutdown(cfg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+
+	case "restart":
+		cfg, err := config.ReadConfig(*cfgpath, 0)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+
+		err = client.Restart(cfg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+
 	case "help", "":
 		printUsage()
 
@@ -149,4 +176,6 @@ func printUsage() {
 	fmt.Printf("  run a check manually:     %s [args] check <host/group>\n", os.Args[0])
 	fmt.Printf("  test an alarm:            %s [args] alarm <name>\n", os.Args[0])
 	fmt.Printf("  start server (forground): %s [args] server\n", os.Args[0])
+	fmt.Printf("  shutdown server:          %s [args] shutdown\n", os.Args[0])
+	fmt.Printf("  restart server:           %s [args] restart\n", os.Args[0])
 }
