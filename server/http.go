@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"git.binarythought.com/cdramey/alrm/api"
 )
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -14,7 +15,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "no command given", http.StatusBadRequest)
 			return
 		}
-		cmd, err := ParseAPICommand([]byte(c))
+		cmd, err := api.ParseCommand([]byte(c))
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error parsing command: %s", err.Error()),
 				http.StatusBadRequest)

@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"crypto/hmac"
@@ -8,63 +8,63 @@ import (
 	"time"
 )
 
-type APICommand struct {
+type Command struct {
 	Expires   time.Time `json:"exp"`
 	Command   string    `json:"cmd"`
 	Scheme    string    `json:"sch"`
 	Signature []byte    `json:"sig,omitempty"`
 }
 
-func ParseAPICommand(jsn []byte) (*APICommand, error) {
-	api := &APICommand{}
-	err := json.Unmarshal(jsn, api)
+func ParseCommand(jsn []byte) (*Command, error) {
+	cmd := &Command{}
+	err := json.Unmarshal(jsn, cmd)
 	if err != nil {
 		return nil, err
 	}
-	return api, nil
+	return cmd, nil
 }
 
-func (ac *APICommand) JSON() ([]byte, error) {
-	return json.Marshal(ac)
+func (c *Command) JSON() ([]byte, error) {
+	return json.Marshal(c)
 }
 
-func (ac *APICommand) Sign(key []byte) error {
-	switch ac.Scheme {
+func (c *Command) Sign(key []byte) error {
+	switch c.Scheme {
 	case "hmac-sha256":
-		j, err := ac.JSON()
+		j, err := c.JSON()
 		if err != nil {
 			return fmt.Errorf("json encoding error")
 		}
 
 		mac := hmac.New(sha256.New, key)
 		mac.Write(j)
-		ac.Signature = mac.Sum(nil)
+		c.Signature = mac.Sum(nil)
 
 	case "":
 		return fmt.Errorf("scheme may not be empty")
 
 	default:
-		return fmt.Errorf("unsupported scheme: %s", ac.Scheme)
+		return fmt.Errorf("unsupported scheme: %s", c.Scheme)
 	}
 	return nil
 }
 
-func (ac *APICommand) Validate(key []byte) error {
-	cpy := &APICommand{
-		Expires: ac.Expires,
-		Command: ac.Command,
-		Scheme:  ac.Scheme,
+func (c *Command) Validate(key []byte) error {
+	cpy := &Command{
+		Expires: c.Expires,
+		Command: c.Command,
+		Scheme:  c.Scheme,
 	}
 	err := cpy.Sign(key)
 	if err != nil {
 		return err
 	}
 
-	if !hmac.Equal(cpy.Signature, ac.Signature) {
+	if !hmac.Equal(cpy.Signature, c.Signature) {
 		return fmt.Errorf("invalid signature")
 	}
 
-	if time.Now().After(ac.Expires) {
+	if time.Now().After(c.Expires) {
 		return fmt.Errorf("command expired")
 	}
 
